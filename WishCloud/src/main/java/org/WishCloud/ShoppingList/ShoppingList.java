@@ -1,6 +1,7 @@
-package org.WishCloud;
+package org.WishCloud.ShoppingList;
 
 import java.util.Map;
+import org.WishCloud.CRDT.CRDT;
 
 public class ShoppingList {
     // declare variables
