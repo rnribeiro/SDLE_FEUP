@@ -1,4 +1,4 @@
-package org.WishCloud;
+package org.WishCloud.CRDT;
 
 public class CRDT<T> {
     private T value;

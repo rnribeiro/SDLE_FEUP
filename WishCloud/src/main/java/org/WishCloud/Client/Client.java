@@ -1,8 +1,8 @@
-package org.WishCloud;
+package org.WishCloud.Client;
 
 import java.util.UUID;
 
-public class client {
+public class Client {
 
     public static String generateUUID() {
         UUID uuid = UUID.randomUUID();

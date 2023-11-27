@@ -1,12 +1,18 @@
 package org.WishCloud;
 
+import org.WishCloud.Database.SQl;
+
 public class Main {
     public static void main(String[] args) {
 
+        SQl sql = new SQl("test.db");
+        sql.connect();
 
-        System.out.println("Hello world!");
+        sql.insertList("test_1","test");
+        sql.insertItem("item",4,"test_1");
+        sql.deleteList("test_1");
 
-
+        sql.close();
         /*
         client
             create list id - done
