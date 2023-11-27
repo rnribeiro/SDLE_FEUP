@@ -1,4 +1,4 @@
 package org.WishCloud;
 
-public class crdt {
+public class Server {
 }
