@@ -40,5 +40,17 @@ public class ShoppingList {
                 '}';
     }
 
+    // create map merge function
+    public Map<String, CRDT<String>> merge(Map<String, CRDT<String>> other) {
+        for (Map.Entry<String, CRDT<String>> entry : other.entrySet()) {
+            if (this.listItems.containsKey(entry.getKey())) {
+                this.listItems.put(entry.getKey(), this.listItems.get(entry.getKey()).merge(entry.getValue()));
+            } else {
+                this.listItems.put(entry.getKey(), entry.getValue());
+            }
+        }
+        return this.listItems;
+    }
+
 }
 
