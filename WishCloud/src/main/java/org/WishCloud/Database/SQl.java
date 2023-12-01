@@ -1,8 +1,6 @@
 package org.WishCloud.Database;
 
-import javax.print.DocFlavor;
 import java.sql.*;
-import java.util.List;
 
 public class SQl {
     private Connection conn = null;
