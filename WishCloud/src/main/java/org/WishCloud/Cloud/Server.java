@@ -1,38 +1,74 @@
 package org.WishCloud.Cloud;
 
 import org.WishCloud.Database.SQl;
+import org.WishCloud.Cloud.Handlers.CreateHandler;
+import org.WishCloud.Cloud.Handlers.ReadHandler;
+import org.WishCloud.Cloud.Handlers.UpdateHandler;
+import org.WishCloud.Cloud.Handlers.DeleteHandler;
+import org.WishCloud.Cloud.Handlers.RefreshHandler;
+
+import com.sun.net.httpserver.HttpServer;
+import org.WishCloud.Utils.Ring;
+
+import java.net.InetSocketAddress;
+import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 public class Server {
-    private final int port;
-    private volatile boolean isRunning = true;
-    private final SQl database;
+    private static final int HashSpace = 1 << 31;
+    private final String serverIp;
+    private final int serverPort;
+    private final String serverNode;
+    private final List<String> seeds;
 
-    public Server(int port) {
-        this.port = port;
-        this.database = new SQl("server_" + port + ".db");
-        this.database.connect();
+
+    public Server(String ServerIp, int serverPort, List<String> seeds) {
+        this.serverIp = ServerIp;
+        this.serverPort = serverPort;
+        this.serverNode = ServerIp + ":" + serverPort;
+        this.seeds = seeds;
     }
 
     public void start() {
         try {
+            // create database
+            SQl db = new SQl(this.serverIp + "_" + this.serverPort + ".db");
+            db.connect();
+
+            // compute ring
+            Ring ring = new Ring(HashSpace);
+            for (String seed : this.seeds) { ring.addNode(seed, 10); }
+            if (!this.seeds.contains(this.serverNode)) { ring.addNode(this.serverNode, 10); }
+
+            // thread pool
+            ThreadPoolExecutor threadPoolExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(10);
+
             // create http server
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            // Clean up resources here (e.g., close channels, database connections, etc.)
-            closeResources();
-        }
-    }
+            HttpServer server = HttpServer.create(new InetSocketAddress(this.serverIp, this.serverPort), 0);
 
-    public void stop() {
-        isRunning = false;
-    }
+            // create contexts
+            server.createContext("/create", new CreateHandler());
+            server.createContext("/update", new UpdateHandler());
+            server.createContext("/delete", new DeleteHandler());
+            server.createContext("/read", new ReadHandler());
+            server.createContext("/refresh", new RefreshHandler());
 
-    private void closeResources() {
-        // Add code here to close resources like channels, database connections, etc.
-        try {
-            // Close database connection
-            this.database.close();
+            // set executor
+            server.setExecutor(threadPoolExecutor);
+
+            // Start the server
+            server.start();
+            System.out.println("Server started on http://" + this.serverIp + ":" + this.serverPort);
+
+            // Add a shutdown hook to stop the server
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                System.out.println("Shutting down");
+                db.close();
+                System.out.println("Database closed");
+                server.stop(5); // Stop the server with a delay of 5 seconds
+                System.out.println("Server stopped");
+            }));
         } catch (Exception e) {
             e.printStackTrace();
         }
