@@ -6,10 +6,12 @@ import org.WishCloud.CRDT.CRDT;
 public class ShoppingList {
     // declare variables
     private String listID;
+    private String name;
     private Map<String, CRDT<String>> listItems;
 
     // constructor
-    public ShoppingList(String listID, Map<String, CRDT<String>> listItems) {
+    public ShoppingList(String name, String listID, Map<String, CRDT<String>> listItems) {
+        this.name = name;
         this.listID = listID;
         this.listItems = listItems;
     }
@@ -21,6 +23,14 @@ public class ShoppingList {
 
     public void setListID(String listID) {
         this.listID = listID;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     public Map<String, CRDT<String>> getListItems() {
@@ -35,6 +45,7 @@ public class ShoppingList {
     @Override
     public String toString() {
         return "ShoppingList{" +
+                "name='" + name + '\'' +
                 "listID='" + listID + '\'' +
                 ", listItems=" + listItems +
                 '}';

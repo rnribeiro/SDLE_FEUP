@@ -18,8 +18,8 @@ class ShoppingListTest {
         items2.put("orange", new CRDT<>("3", 123456791, "client2"));
         items2.put("banana", new CRDT<>("4", 123456792, "client2"));
 
-        ShoppingList list1 = new ShoppingList("list1", items1);
-        ShoppingList list2 = new ShoppingList("list2", items2);
+        ShoppingList list1 = new ShoppingList("list1","list1", items1);
+        ShoppingList list2 = new ShoppingList("list2","list2", items2);
 
         Map<String, CRDT<String>> mergedItems = list1.merge(list2.getListItems());
 

@@ -1,18 +1,26 @@
 package org.WishCloud;
 
 import org.WishCloud.Database.SQl;
+import org.WishCloud.ShoppingList.ShoppingList;
+import org.WishCloud.CRDT.CRDT;
+
+import java.util.Map;
 
 public class Main {
     public static void main(String[] args) {
 
         SQl sql = new SQl("test.db");
-        sql.connect();
+        sql.createDB();
 
-        sql.insertList("test_1","test");
-        sql.insertItem("item",4,"test_1");
-        sql.deleteList("test_1");
+        // create shopping list
+        Map<String,CRDT<String>> listItems = Map.of(
+                "item1", new CRDT<>("1", 1, "client1"),
+                "item2", new CRDT<>("1", 2, "client2"),
+                "item3", new CRDT<>("0", 3, "client3")
+        );
+        ShoppingList shoppingList1 = new ShoppingList("test", "test", listItems);
 
-        sql.close();
+        sql.insertSL(shoppingList1);
         /*
         client
             create list id - done

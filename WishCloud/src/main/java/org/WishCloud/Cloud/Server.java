@@ -34,7 +34,7 @@ public class Server {
         try {
             // create database
             SQl db = new SQl(this.serverIp + "_" + this.serverPort + ".db");
-            db.connect();
+            db.createDB();
 
             // compute ring
             Ring ring = new Ring(HashSpace);
@@ -59,13 +59,11 @@ public class Server {
 
             // Start the server
             server.start();
-            System.out.println("Server started on http://" + this.serverIp + ":" + this.serverPort);
+            System.out.println("Server started on http://" + this.serverNode);
 
             // Add a shutdown hook to stop the server
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 System.out.println("Shutting down");
-                db.close();
-                System.out.println("Database closed");
                 server.stop(5); // Stop the server with a delay of 5 seconds
                 System.out.println("Server stopped");
             }));

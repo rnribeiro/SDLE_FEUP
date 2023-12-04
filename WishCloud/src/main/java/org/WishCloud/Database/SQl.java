@@ -1,19 +1,27 @@
 package org.WishCloud.Database;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.*;
+import java.util.Map;
+
+import org.WishCloud.CRDT.CRDT;
+import org.WishCloud.ShoppingList.ShoppingList;
 
 public class SQl {
     private Connection conn = null;
     private final String dbName;
     private static final String sql_lists = """
             CREATE TABLE IF NOT EXISTS lists (
-            	uuid text NOT NULL PRIMARY KEY,
-            	name text NOT NULL
+                name text NOT NULL,
+            	uuid text NOT NULL PRIMARY KEY
             );""";
     private static final String sql_items = """
             CREATE TABLE IF NOT EXISTS items (
             	name text NOT NULL,
-            	marked integer NOT NULL,
+            	value integer NOT NULL,
+            	counter integer NOT NULL,
+            	author text NOT NULL,
             	list_uuid text NOT NULL,
             	FOREIGN KEY (list_uuid) REFERENCES lists (uuid)
             );""";
@@ -22,8 +30,10 @@ public class SQl {
         this.dbName = dbName;
     }
 
-    public void connect() {
-        String url = "jdbc:sqlite:C:/sqlite/db/" + this.dbName;
+    public void createDB() {
+        String path = System.getProperty("user.dir");
+        Path fullPath = Paths.get(path, "DBs", this.dbName);
+        String url = "jdbc:sqlite:" + fullPath;
 
         try {
             this.conn = DriverManager.getConnection(url);
@@ -38,86 +48,104 @@ public class SQl {
             }
         } catch (SQLException e) {
             System.out.println(e.getMessage());
+        } finally {
+            close();
         }
     }
 
-    public void insertList(String uuid, String name) {
-        String sql = "INSERT INTO lists(uuid,name) VALUES(?,?)";
+    private void connect() {
+        String path = System.getProperty("user.dir");
+        Path fullPath = Paths.get(path, "DBs", this.dbName);
+        String url = "jdbc:sqlite:" + fullPath;
 
         try {
-            PreparedStatement pstmt = this.conn.prepareStatement(sql);
-            pstmt.setString(1, uuid);
-            pstmt.setString(2, name);
-            pstmt.executeUpdate();
+            this.conn = DriverManager.getConnection(url);
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
     }
 
-    public void insertItem(String name, int marked, String list_id) {
-        String sql = "INSERT INTO items(name,marked,list_uuid) VALUES(?,?,?)";
-
-        try {
-            PreparedStatement pstmt = this.conn.prepareStatement(sql);
-            pstmt.setString(1, name);
-            pstmt.setInt(2, marked);
-            pstmt.setString(3, list_id);
-            pstmt.executeUpdate();
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
-    }
-
-    public void updateList(String uuid, String name) {
-        String sql = "UPDATE lists SET name = ? WHERE uuid = ?";
-
-        try {
-            PreparedStatement pstmt = this.conn.prepareStatement(sql);
-            pstmt.setString(1, name);
-            pstmt.setString(2, uuid);
-            pstmt.executeUpdate();
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
-    }
-
-    public void updateItem(String name, int marked, String list_id) {
-        String sql = "UPDATE items SET marked = ? WHERE name = ? AND list_uuid = ?";
-
-        try {
-            PreparedStatement pstmt = this.conn.prepareStatement(sql);
-            pstmt.setInt(1, marked);
-            pstmt.setString(2, name);
-            pstmt.setString(3, list_id);
-            pstmt.executeUpdate();
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
-    }
-
-    public void deleteList(String uuid) {
-        String sql = "DELETE FROM lists WHERE uuid = ?";
-        String sql2 = "DELETE FROM items WHERE list_uuid = ?";
-
-        try {
-            PreparedStatement pstmt = this.conn.prepareStatement(sql);
-            PreparedStatement pstmt2 = this.conn.prepareStatement(sql2);
-            pstmt.setString(1, uuid);
-            pstmt2.setString(1, uuid);
-            pstmt.executeUpdate();
-            pstmt2.executeUpdate();
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
-    }
-
-    public void close() {
+    private void close() {
         try {
             if (this.conn != null) {
+                if (!this.conn.getAutoCommit()) { this.conn.rollback(); }
                 this.conn.close();
             }
         } catch (SQLException e) {
             System.out.println(e.getMessage());
+        }
+    }
+
+    private void beginTransaction() {
+        try {
+            if (this.conn != null) {
+                this.conn.setAutoCommit(false);
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+    private void commitTransaction() {
+        try {
+            if (this.conn != null) {
+                this.conn.commit();
+                this.conn.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+    private void rollbackTransaction() {
+        try {
+            if (this.conn != null) {
+                if (!this.conn.getAutoCommit()) { this.conn.rollback(); }
+                this.conn.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+    public synchronized void insertSL(ShoppingList list) {
+        String uuid = list.getListID();
+        String name = list.getName();
+        Map<String, CRDT<String>> items = list.getListItems();
+
+        connect();
+        beginTransaction();
+        try {
+            // insert list
+            String sql = "INSERT INTO lists (name, uuid) VALUES (?, ?)";
+            PreparedStatement pstmt = this.conn.prepareStatement(sql);
+            pstmt.setString(1, name);
+            pstmt.setString(2, uuid);
+            pstmt.executeUpdate();
+
+            // insert items
+            for (Map.Entry<String, CRDT<String>> entry : items.entrySet()) {
+                String item_name = entry.getKey();
+                int value = Integer.parseInt(entry.getValue().getValue());
+                long counter = entry.getValue().getTimestamp();
+                String author = entry.getValue().getClientID();
+
+                sql = "INSERT INTO items (name, value, counter, author, list_uuid) VALUES (?, ?, ?, ?, ?)";
+                pstmt = this.conn.prepareStatement(sql);
+                pstmt.setString(1, item_name);
+                pstmt.setInt(2, value);
+                pstmt.setLong(3, counter);
+                pstmt.setString(4, author);
+                pstmt.setString(5, uuid);
+                pstmt.executeUpdate();
+            }
+
+            commitTransaction();
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            rollbackTransaction();
+        } finally {
+            close();
         }
     }
 }
