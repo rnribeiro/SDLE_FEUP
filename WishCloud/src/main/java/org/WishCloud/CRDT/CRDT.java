@@ -31,7 +31,7 @@ public class CRDT<T> {
 
     // getters and setters
     public T getValue() {
-        return value;
+        return this.value;
     }
 
     public void setValue(T value) {
@@ -39,7 +39,7 @@ public class CRDT<T> {
     }
 
     public long getTimestamp() {
-        return timestamp;
+        return this.timestamp;
     }
 
     public void setTimestamp(long timestamp) {
@@ -52,4 +52,7 @@ public class CRDT<T> {
         return "CRDT current state: {value=" + value + ", timestamp=" + timestamp + ", clientID=" + clientID + "}";
     }
 
+    public String getClientID() {
+        return this.clientID;
+    }
 }
