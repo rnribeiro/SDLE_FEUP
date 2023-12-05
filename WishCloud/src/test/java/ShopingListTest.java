@@ -35,4 +35,16 @@ class ShoppingListTest {
         assertEquals(123456789, mergedItems.get("apple").getTimestamp());
         assertEquals("client1", mergedItems.get("apple").getClientID());
     }
+
+    @Test
+    // test printShoppingList
+    void testPrintShoppingList() {
+        Map<String, CRDT<String>> items = new HashMap<>();
+        items.put("apple", new CRDT<>("2", 123456789, "client1"));
+        items.put("orange", new CRDT<>("9", 123456790, "client1"));
+
+        ShoppingList list = new ShoppingList("list1","list1", items);
+
+        list.printShoppingList();
+    }
 }

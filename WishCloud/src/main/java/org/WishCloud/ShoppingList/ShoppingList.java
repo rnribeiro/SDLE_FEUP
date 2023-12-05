@@ -68,5 +68,38 @@ public class ShoppingList {
         return this.listItems;
     }
 
+    // loop through map and print shopping list
+    public void printShoppingList() {
+        System.out.println("List Items:");
+        System.out.println("------------------------------------------------------------");
+        System.out.printf("%-20s | %-10s | %-10s | %-20s\n", "Item Name", "Value", "Counter", "Author");
+        System.out.println("------------------------------------------------------------");
+
+        for (Map.Entry<String, CRDT<String>> entry : this.listItems.entrySet()) {
+            String itemName = entry.getKey();
+            CRDT<String> crdtItem = entry.getValue();
+            int value = Integer.parseInt(crdtItem.getValue());
+            long counter = crdtItem.getTimestamp();
+            String author = crdtItem.getClientID();
+
+            System.out.printf("%-20s | %-10d | %-10d | %-20s\n", itemName, value, counter, author);
+        }
+    }
+
+    // add item to shopping list
+    public void addItem(String itemName, CRDT<String> crdtItem) {
+        this.listItems.put(itemName, crdtItem);
+    }
+
+    // remove item from shopping list
+    public void removeItem(String itemName) {
+        this.listItems.remove(itemName);
+    }
+
+    // update item in shopping list (value)
+    public void updateItem(String itemName, CRDT<String> crdtItem) {
+        this.listItems.put(itemName, crdtItem);
+    }
+
 }
 
