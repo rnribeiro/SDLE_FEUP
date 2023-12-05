@@ -3,6 +3,7 @@ package org.WishCloud;
 import org.WishCloud.Database.SQl;
 import org.WishCloud.ShoppingList.ShoppingList;
 import org.WishCloud.CRDT.CRDT;
+import org.WishCloud.Utils.Serializer;
 
 import java.util.Map;
 
@@ -21,6 +22,13 @@ public class Main {
         ShoppingList shoppingList1 = new ShoppingList("test", "test", listItems);
 
         sql.insertSL(shoppingList1);
+
+        System.out.println(shoppingList1);
+
+        byte[] str = Serializer.serialize(shoppingList1);
+        ShoppingList shoppingList2 = Serializer.deserialize(str);
+
+        System.out.println(shoppingList2);
         /*
         client
             create list id - done
