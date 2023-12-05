@@ -1,6 +1,7 @@
 package org.WishCloud.Client;
 
 import java.util.UUID;
+import org.WishCloud.Client.UI.ShoppingInterface;
 
 public class Client {
 
@@ -12,5 +13,7 @@ public class Client {
     public static void main(String[] args) {
         String randomUUID = generateUUID();
         System.out.println("Random UUID: " + randomUUID);
+        
+        ShoppingInterface.main(args);
     }
 }
