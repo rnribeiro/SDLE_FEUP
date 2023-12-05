@@ -3,6 +3,7 @@ package org.WishCloud.Database;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.*;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.WishCloud.CRDT.CRDT;
@@ -53,7 +54,7 @@ public class SQl {
         }
     }
 
-    private void connect() {
+    public void connect() {
         String path = System.getProperty("user.dir");
         Path fullPath = Paths.get(path, "DBs", this.dbName);
         String url = "jdbc:sqlite:" + fullPath;
@@ -65,7 +66,7 @@ public class SQl {
         }
     }
 
-    private void close() {
+    public void close() {
         try {
             if (this.conn != null) {
                 if (!this.conn.getAutoCommit()) { this.conn.rollback(); }
@@ -148,4 +149,47 @@ public class SQl {
             close();
         }
     }
+
+    public synchronized ShoppingList getShoppingList(String listUUID) {
+        connect();
+        ShoppingList shoppingList = null;
+
+        try {
+            // Query to get the shopping list details
+            String listSql = "SELECT * FROM lists WHERE uuid = ?";
+            PreparedStatement listPstmt = this.conn.prepareStatement(listSql);
+            listPstmt.setString(1, listUUID);
+            ResultSet listRs = listPstmt.executeQuery();
+
+            if (listRs.next()) {
+                String name = listRs.getString("name");
+
+                // Query to get items of the shopping list
+                String itemsSql = "SELECT * FROM items WHERE list_uuid = ?";
+                PreparedStatement itemsPstmt = this.conn.prepareStatement(itemsSql);
+                itemsPstmt.setString(1, listUUID);
+                ResultSet itemsRs = itemsPstmt.executeQuery();
+
+                Map<String, CRDT<String>> items = new HashMap<>();
+                while (itemsRs.next()) {
+                    String itemName = itemsRs.getString("name");
+                    String value = String.valueOf(itemsRs.getInt("value"));
+                    long counter = itemsRs.getLong("counter");
+                    String author = itemsRs.getString("author");
+
+                    CRDT<String> crdtItem = new CRDT<>(value, counter, author);
+                    items.put(itemName, crdtItem);
+                }
+
+                shoppingList = new ShoppingList(name, listUUID, items);
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        } finally {
+            close();
+        }
+
+        return shoppingList;
+    }
+
 }
