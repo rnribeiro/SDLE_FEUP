@@ -17,6 +17,14 @@ public class CRDT<T> {
         this.clientID = clientID;
     }
 
+    // constructor from json
+    public CRDT(String json) {
+        String[] aux = json.split(",");
+        this.value = (T) aux[0].split(":")[1];
+        this.timestamp = Long.parseLong(aux[1].split(":")[1]);
+        this.clientID = aux[2].split(":")[1].substring(1, aux[2].split(":")[1].length()-2);
+    }
+
     // create merge function
     public CRDT<T> merge(CRDT<T> other) {
         if (other.timestamp > this.timestamp) {
@@ -62,5 +70,14 @@ public class CRDT<T> {
     @Override
     public String toString() {
         return "CRDT current state: {value=" + value + ", timestamp=" + timestamp + ", clientID=" + clientID + "}";
+    }
+
+    // convert to json
+    public String toJson() {
+        return "{" +
+                "\"value\": " + value +
+                ", \"timestamp\": " + timestamp +
+                ", \"clientID\": \"" + clientID + '\"' +
+                '}';
     }
 }
