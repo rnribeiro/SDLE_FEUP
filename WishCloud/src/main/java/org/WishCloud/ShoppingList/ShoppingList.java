@@ -1,5 +1,6 @@
 package org.WishCloud.ShoppingList;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -85,6 +86,32 @@ public class ShoppingList {
             System.out.printf("%-20s | %-10d | %-10d | %-20s\n", itemName, value, counter, author);
         }
     }
+
+    // loop through map and convert shopping list to json with formatting
+    public String toJson() {
+        String json = "{\n";
+        json += "\t\"name\": \"" + this.name + "\",\n";
+        json += "\t\"listID\": \"" + this.listID + "\",\n";
+        json += "\t\"listItems\": {\n";
+        for (Map.Entry<String, CRDT<String>> entry : this.listItems.entrySet()) {
+            String itemName = entry.getKey();
+            CRDT<String> crdtItem = entry.getValue();
+            int value = Integer.parseInt(crdtItem.getValue());
+            long counter = crdtItem.getTimestamp();
+            String author = crdtItem.getClientID();
+
+            json += "\t\t\"" + itemName + "\": {\n";
+            json += "\t\t\t\"value\": \"" + value + "\",\n";
+            json += "\t\t\t\"timestamp\": \"" + counter + "\",\n";
+            json += "\t\t\t\"clientID\": \"" + author + "\"\n";
+            json += "\t\t},\n";
+        }
+        json = json.substring(0, json.length() - 2);
+        json += "\n\t}\n";
+        json += "}";
+        return json;
+    }
+
 
     // add item to shopping list
     public void addItem(String itemName, CRDT<String> crdtItem) {
