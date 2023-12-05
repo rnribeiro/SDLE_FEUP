@@ -192,4 +192,52 @@ public class SQl {
         return shoppingList;
     }
 
+    public synchronized void updateShoppingList(ShoppingList updatedList) {
+        connect();
+        beginTransaction();
+
+        try {
+            String uuid = updatedList.getListID();
+            String name = updatedList.getName();
+            Map<String, CRDT<String>> items = updatedList.getListItems();
+
+            // Update the list name in the 'lists' table
+            String updateListSql = "UPDATE lists SET name = ? WHERE uuid = ?";
+            PreparedStatement updateListPstmt = this.conn.prepareStatement(updateListSql);
+            updateListPstmt.setString(1, name);
+            updateListPstmt.setString(2, uuid);
+            updateListPstmt.executeUpdate();
+
+            // Clear existing items for the list in the 'items' table
+            String deleteItemsSql = "DELETE FROM items WHERE list_uuid = ?";
+            PreparedStatement deleteItemsPstmt = this.conn.prepareStatement(deleteItemsSql);
+            deleteItemsPstmt.setString(1, uuid);
+            deleteItemsPstmt.executeUpdate();
+
+            // Insert updated items into the 'items' table
+            String insertItemsSql = "INSERT INTO items (name, value, counter, author, list_uuid) VALUES (?, ?, ?, ?, ?)";
+            PreparedStatement insertItemsPstmt = this.conn.prepareStatement(insertItemsSql);
+            for (Map.Entry<String, CRDT<String>> entry : items.entrySet()) {
+                String itemName = entry.getKey();
+                int value = Integer.parseInt(entry.getValue().getValue());
+                long counter = entry.getValue().getTimestamp();
+                String author = entry.getValue().getClientID();
+
+                insertItemsPstmt.setString(1, itemName);
+                insertItemsPstmt.setInt(2, value);
+                insertItemsPstmt.setLong(3, counter);
+                insertItemsPstmt.setString(4, author);
+                insertItemsPstmt.setString(5, uuid);
+                insertItemsPstmt.executeUpdate();
+            }
+
+            commitTransaction();
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            rollbackTransaction();
+        } finally {
+            close();
+        }
+    }
+
 }
