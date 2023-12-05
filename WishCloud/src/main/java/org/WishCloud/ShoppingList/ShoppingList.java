@@ -1,6 +1,8 @@
 package org.WishCloud.ShoppingList;
 
 import java.util.Map;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.WishCloud.CRDT.CRDT;
 
 public class ShoppingList {
@@ -9,14 +11,17 @@ public class ShoppingList {
     private String name;
     private Map<String, CRDT<String>> listItems;
 
-    // constructor
-    public ShoppingList(String name, String listID, Map<String, CRDT<String>> listItems) {
+
+    public ShoppingList(
+            @JsonProperty("name")String name,
+            @JsonProperty("listID")String listID,
+            @JsonProperty("listItems")Map<String, CRDT<String>> listItems
+    ) {
         this.name = name;
         this.listID = listID;
         this.listItems = listItems;
     }
 
-    // getters and setters
     public String getListID() {
         return listID;
     }

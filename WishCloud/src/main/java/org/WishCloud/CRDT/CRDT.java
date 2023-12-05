@@ -1,12 +1,17 @@
 package org.WishCloud.CRDT;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class CRDT<T> {
     private T value;
     private long timestamp;
     private String clientID;
 
     // constructor
-    public CRDT(T value, long timestamp, String clientID) {
+    public CRDT(@JsonProperty("value")T value,
+                @JsonProperty("timestamp")long timestamp,
+                @JsonProperty("clientID")String clientID)
+    {
         this.value = value;
         this.timestamp = timestamp;
         this.clientID = clientID;
@@ -46,13 +51,16 @@ public class CRDT<T> {
         this.timestamp = timestamp;
     }
 
-    // toString
+    public String getClientID() {
+        return this.clientID;
+    }
+
+    public void setClientID(String clientID) {
+        this.clientID = clientID;
+    }
+
     @Override
     public String toString() {
         return "CRDT current state: {value=" + value + ", timestamp=" + timestamp + ", clientID=" + clientID + "}";
-    }
-
-    public String getClientID() {
-        return this.clientID;
     }
 }
