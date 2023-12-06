@@ -23,19 +23,22 @@ class ShoppingListTest {
         ShoppingList list1 = new ShoppingList("list1","list1", items1);
         ShoppingList list2 = new ShoppingList("list2","list2", items2);
 
-        Map<String, CRDT<String>> mergedItems = list1.merge(list2.getListItems());
+        ShoppingList mergedList = list1.merge(list2.getListItems());
 
-        assertEquals("3", mergedItems.get("orange").getValue());
-        assertEquals(123456791, mergedItems.get("orange").getTimestamp());
-        assertEquals("client2", mergedItems.get("orange").getClientID());
+        // print json merged list
+        System.out.println(mergedList.toJson());
 
-        assertEquals("4", mergedItems.get("banana").getValue());
-        assertEquals(123456792, mergedItems.get("banana").getTimestamp());
-        assertEquals("client2", mergedItems.get("banana").getClientID());
+        assertEquals("3", mergedList.getListItems().get("orange").getValue());
+        assertEquals(123456791, mergedList.getListItems().get("orange").getTimestamp());
+        assertEquals("client2", mergedList.getListItems().get("orange").getClientID());
 
-        assertEquals("2", mergedItems.get("apple").getValue());
-        assertEquals(123456789, mergedItems.get("apple").getTimestamp());
-        assertEquals("client1", mergedItems.get("apple").getClientID());
+        assertEquals("4", mergedList.getListItems().get("banana").getValue());
+        assertEquals(123456792, mergedList.getListItems().get("banana").getTimestamp());
+        assertEquals("client2", mergedList.getListItems().get("banana").getClientID());
+
+        assertEquals("2", mergedList.getListItems().get("apple").getValue());
+        assertEquals(123456789, mergedList.getListItems().get("apple").getTimestamp());
+        assertEquals("client1", mergedList.getListItems().get("apple").getClientID());
     }
 
     @Test

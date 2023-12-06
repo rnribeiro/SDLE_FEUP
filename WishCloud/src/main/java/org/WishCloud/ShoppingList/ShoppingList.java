@@ -57,16 +57,33 @@ public class ShoppingList {
                 '}';
     }
 
-    // create map merge function
-    public Map<String, CRDT<String>> merge(Map<String, CRDT<String>> other) {
-        for (Map.Entry<String, CRDT<String>> entry : other.entrySet()) {
-            if (this.listItems.containsKey(entry.getKey())) {
-                this.listItems.put(entry.getKey(), this.listItems.get(entry.getKey()).merge(entry.getValue()));
+    // create map merge function and return a new shopping list object
+    public ShoppingList merge(Map<String, CRDT<String>> other) {
+        Map<String, CRDT<String>> mergedItems = new HashMap<>();
+
+        for (Map.Entry<String, CRDT<String>> entry : this.listItems.entrySet()) {
+            String itemName = entry.getKey();
+            CRDT<String> crdtItem = entry.getValue();
+
+            if (other.containsKey(itemName)) {
+                CRDT<String> otherCrdtItem = other.get(itemName);
+                CRDT<String> mergedCrdtItem = crdtItem.merge(otherCrdtItem);
+                mergedItems.put(itemName, mergedCrdtItem);
             } else {
-                this.listItems.put(entry.getKey(), entry.getValue());
+                mergedItems.put(itemName, crdtItem);
             }
         }
-        return this.listItems;
+
+        for (Map.Entry<String, CRDT<String>> entry : other.entrySet()) {
+            String itemName = entry.getKey();
+            CRDT<String> crdtItem = entry.getValue();
+
+            if (!this.listItems.containsKey(itemName)) {
+                mergedItems.put(itemName, crdtItem);
+            }
+        }
+
+        return new ShoppingList(this.name, this.listID, mergedItems);
     }
 
     // loop through map and print shopping list

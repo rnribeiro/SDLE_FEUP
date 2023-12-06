@@ -103,4 +103,20 @@ public class Ring {
     public List<String> getNodes() {
         return nodes;
     }
+
+    public List<String> getNextNodes(String currentNode, int count) {
+        List<String> result = new ArrayList<>();
+        int currentIndex = nodes.indexOf(currentNode);
+
+        if (currentIndex != -1) {
+            int size = nodes.size();
+            for (int i = 1; i <= count; i++) {
+                int nextIndex = (currentIndex + i) % size;
+                result.add(nodes.get(nextIndex));
+            }
+        }
+
+        return result;
+    }
+
 }
