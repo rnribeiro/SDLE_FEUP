@@ -109,10 +109,11 @@ public class SQl {
         }
     }
 
-    public synchronized void insertSL(ShoppingList list) {
+    public synchronized boolean insertSL(ShoppingList list) {
         String uuid = list.getListID();
         String name = list.getName();
         Map<String, CRDT<String>> items = list.getListItems();
+        boolean error = false;
 
         connect();
         beginTransaction();
@@ -145,9 +146,12 @@ public class SQl {
         } catch (SQLException e) {
             System.out.println(e.getMessage());
             rollbackTransaction();
+            error = true;
         } finally {
             close();
         }
+
+        return error;
     }
 
     public ShoppingList getShoppingList(String listUUID) {
