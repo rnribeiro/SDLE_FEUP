@@ -1,3 +1,5 @@
+package CRDT;
+
 import org.junit.jupiter.api.Test;
 import org.WishCloud.CRDT.CRDT;
 import static org.junit.jupiter.api.Assertions.*;

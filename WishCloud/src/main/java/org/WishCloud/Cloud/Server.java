@@ -11,7 +11,9 @@ import com.sun.net.httpserver.HttpServer;
 import org.WishCloud.Utils.Ring;
 
 import java.net.InetSocketAddress;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
@@ -47,7 +49,7 @@ public class Server {
             HttpServer server = HttpServer.create(new InetSocketAddress(this.serverIp, this.serverPort), 0);
 
             // create contexts
-            server.createContext("/create", new CreateHandler());
+            server.createContext("/create", new CreateHandler(this.serverName, ring, db));
             server.createContext("/synchronize", new SynchroniseHandler(ring, this.serverName, db));
             server.createContext("/read", new ReadHandler());
             server.createContext("/refresh", new RefreshHandler());
