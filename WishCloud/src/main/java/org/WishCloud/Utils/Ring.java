@@ -63,40 +63,70 @@ public class Ring {
         hashKeys.sort(Long::compareTo);
     }
 
-    public String getNode(String key) {
-        if (hashKeys.isEmpty()) {
-            return null;
-        }
+    /**
+     * Returns the index of the virtual node in the hashKeys list
+     * Use to map item to the virtual node
+     * @param key the key to be hashed
+     * @return index of the virtual node in the hashKeys() list
+     */
+    public int getVNIndex(String key) {
+        if (hashKeys.isEmpty()) { return -1; }
 
-        Long hash = generateHash(key) % HashSpace;
+        long hash = generateHash(key) % HashSpace;
         int index = binarySearch(hashKeys, hash);
         if (index < 0) {
             index = -index - 1;
-            if (index >= hashKeys.size()) {
-                index = 0;
-            }
+            if (index >= hashKeys.size()) { index = 0; }
         }
-        return hashNodes.get(hashKeys.get(index));
+        return index;
     }
 
-    public List<String> getPreferenceList(String Key, int counter) {
+    /**
+     * Returns the physical node that the key is mapped to
+     * @param key the key to be hashed
+     * @return the node that the key is mapped to
+     */
+    public String getNode(String key) {
+        if (hashKeys.isEmpty() || (getVNIndex(key) == -1)) { return null; }
+        return hashNodes.get(hashKeys.get(getVNIndex(key)));
+    }
+
+    /**
+     * Returns list of physical nodes by order of preference
+     * Is determined by the order of the virtual nodes
+     * Skips nodes that map to the same physical node
+     * List made of every physical node in the ring
+     * @param Key the key to be hashed
+     * @return the node that the key is mapped to
+     */
+    public List<String> getPreferenceList(String Key) {
         List<String> preferenceList = new ArrayList<>();
-        Long hash = generateHash(Key) % HashSpace;
-        int index = binarySearch(hashKeys, hash);
-        if (index < 0) {
-            index = -index - 1;
-            if (index >= hashKeys.size()) {
-                index = 0;
+        int vNodeIndex;
+        if (hashKeys.isEmpty() || (vNodeIndex = getVNIndex(Key)) == -1) { return null; }
+
+        int count = 0;
+        while (count < nodes.size()) {
+            String node = hashNodes.get(hashKeys.get(vNodeIndex));
+            if (!preferenceList.contains(node)) {
+                preferenceList.add(node);
+                count++;
             }
+            vNodeIndex = (vNodeIndex + 1) % hashKeys.size();
         }
 
-        for (int i = 0; i < counter; i++) {
-            preferenceList.add(hashNodes.get(hashKeys.get(index)));
-            index++;
-            if (index >= hashKeys.size()) {
-                index = 0;
-            }
-        }
+        return preferenceList;
+    }
+
+    /**
+     * Returns preference list for a specific item
+     * @param Key the key to be hashed
+     * @param count the number of nodes to return
+     * @return the node that the key is mapped to
+     */
+    public List<String> getPreferenceList(String Key, int count) {
+        List<String> preferenceList = getPreferenceList(Key);
+        preferenceList = preferenceList.subList(0, count);
+
         return preferenceList;
     }
 
