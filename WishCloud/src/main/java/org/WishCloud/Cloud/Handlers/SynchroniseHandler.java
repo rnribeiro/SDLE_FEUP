@@ -21,11 +21,13 @@ public class SynchroniseHandler implements HttpHandler {
     private final Ring ring;
     private final HttpClient httpClient;
     private final String serverName;
+    private final SQl db;
 
-    public SynchroniseHandler(Ring ring, String serverName) {
+    public SynchroniseHandler(Ring ring, String serverName, SQl db) {
         this.ring = ring;
         this.httpClient = HttpClient.newHttpClient();
         this.serverName = serverName;
+        this.db = db;
     }
 
     @Override
@@ -38,15 +40,14 @@ public class SynchroniseHandler implements HttpHandler {
         ShoppingList clientShoppingList = Serializer.deserialize(requestBodyBytes);
 
         // Check if the shopping list exists in the server's database
-        SQl db = new SQl("your_database_name.db");
-        ShoppingList serverShoppingList = db.getShoppingList(clientShoppingList.getListID());
+        ShoppingList serverShoppingList = this.db.getShoppingList(clientShoppingList.getListID());
 
         if (serverShoppingList != null) {
             // Merge the CRDT maps of client and server shopping lists
             ShoppingList mergedShoppingList = clientShoppingList.merge(serverShoppingList.getListItems());
 
             // Update the server's database with the merged shopping list
-            db.updateShoppingList(mergedShoppingList);
+            this.db.updateShoppingList(mergedShoppingList);
 
             // Serialize the merged shopping list to send back to the client
             byte[] responseBytes = Serializer.serialize(mergedShoppingList);
