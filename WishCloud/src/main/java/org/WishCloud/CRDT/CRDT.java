@@ -75,9 +75,9 @@ public class CRDT<T> {
     // convert to json
     public String toJson() {
         return "{" +
-                "\"value\": " + value +
-                ", \"timestamp\": " + timestamp +
-                ", \"clientID\": \"" + clientID + '\"' +
+                "\"value\":\"" + value + '\"' +
+                ", \"timestamp\":" + timestamp +
+                ", \"clientID\":\"" + clientID + '\"' +
                 '}';
     }
 }
