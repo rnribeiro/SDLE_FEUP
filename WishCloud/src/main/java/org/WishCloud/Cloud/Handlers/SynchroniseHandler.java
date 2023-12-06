@@ -20,10 +20,12 @@ public class SynchroniseHandler implements HttpHandler {
 
     private final Ring ring;
     private final HttpClient httpClient;
+    private final String serverName;
 
-    public SynchroniseHandler(Ring ring) {
+    public SynchroniseHandler(Ring ring, String serverName) {
         this.ring = ring;
         this.httpClient = HttpClient.newHttpClient();
+        this.serverName = serverName;
     }
 
     @Override
@@ -70,26 +72,34 @@ public class SynchroniseHandler implements HttpHandler {
     }
 
     private void propagateUpdate(ShoppingList updatedShoppingList) {
-        List<String> nextNodes = ring.getNextNodes(ring.getNode(updatedShoppingList.getListID()), 3);
-        for (String nextNode : nextNodes) {
-            try {
-                // Create an HTTP request to the next node in the ring
-                HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create("http://" + nextNode + "/update"))
-                        .header("Content-Type", "application/json")
-                        .POST(HttpRequest.BodyPublishers.ofByteArray(Serializer.serialize(updatedShoppingList)))
-                        .build();
+        List<String> nextNodes = ring.getPreferenceList(ring.getNode(updatedShoppingList.getListID()), 3);
 
-                // Send the request using HttpClient
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        if (nextNodes.size() == 1) {
+            return;
+        }
 
-                // Get the response from the next node (optional)
-                int responseCode = response.statusCode();
-                System.out.println("Update propagated to " + nextNode + ". Response code: " + responseCode);
-            } catch (IOException | InterruptedException e) {
-                e.printStackTrace();
-                // Handle connection issues or errors during propagation
-            }
+        // reduce the preference list to the nodes after the current node
+        int index = nextNodes.indexOf(serverName);
+        nextNodes = nextNodes.subList(index + 1, nextNodes.size());
+
+        String nextNode = ring.getNode(nextNodes.get(0));
+        try {
+            // Create an HTTP request to the next node in the ring
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("http://" + nextNode + "/update"))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofByteArray(Serializer.serialize(updatedShoppingList)))
+                    .build();
+
+            // Send the request using HttpClient
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            // Get the response from the next node (optional)
+            int responseCode = response.statusCode();
+            System.out.println("Update propagated to " + nextNode + ". Response code: " + responseCode);
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+            // Handle connection issues or errors during propagation
         }
     }
 

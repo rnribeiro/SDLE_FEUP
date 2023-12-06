@@ -91,7 +91,9 @@ public class Ring {
         }
 
         for (int i = 0; i < counter; i++) {
-            preferenceList.add(hashNodes.get(hashKeys.get(index)));
+            if (!preferenceList.contains(hashNodes.get(hashKeys.get(index)))) {
+                preferenceList.add(hashNodes.get(hashKeys.get(index)));
+            }
             index++;
             if (index >= hashKeys.size()) {
                 index = 0;
