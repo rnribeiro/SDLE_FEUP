@@ -44,7 +44,7 @@ public class SynchroniseHandler implements HttpHandler {
             ShoppingList mergedShoppingList = clientShoppingList.merge(serverShoppingList.getListItems());
 
             // Update the server's database with the merged shopping list
-            db.insertSL(mergedShoppingList);
+            db.updateShoppingList(mergedShoppingList);
 
             // Serialize the merged shopping list to send back to the client
             byte[] responseBytes = Serializer.serialize(mergedShoppingList);
