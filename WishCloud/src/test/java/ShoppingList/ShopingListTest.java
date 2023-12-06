@@ -1,3 +1,5 @@
+package ShoppingList;
+
 import org.junit.jupiter.api.Test;
 import org.WishCloud.CRDT.CRDT;
 import org.WishCloud.ShoppingList.ShoppingList;

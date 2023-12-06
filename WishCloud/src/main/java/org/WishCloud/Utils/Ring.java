@@ -79,6 +79,27 @@ public class Ring {
         return hashNodes.get(hashKeys.get(index));
     }
 
+    public List<String> getPreferenceList(String Key, int counter) {
+        List<String> preferenceList = new ArrayList<>();
+        Long hash = generateHash(Key) % HashSpace;
+        int index = binarySearch(hashKeys, hash);
+        if (index < 0) {
+            index = -index - 1;
+            if (index >= hashKeys.size()) {
+                index = 0;
+            }
+        }
+
+        for (int i = 0; i < counter; i++) {
+            preferenceList.add(hashNodes.get(hashKeys.get(index)));
+            index++;
+            if (index >= hashKeys.size()) {
+                index = 0;
+            }
+        }
+        return preferenceList;
+    }
+
     public List<String> getNodes() {
         return nodes;
     }

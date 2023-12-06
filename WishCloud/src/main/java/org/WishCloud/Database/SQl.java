@@ -150,10 +150,10 @@ public class SQl {
         }
     }
 
-    public synchronized ShoppingList getShoppingList(String listUUID) {
-        connect();
+    public ShoppingList getShoppingList(String listUUID) {
         ShoppingList shoppingList = null;
 
+        connect();
         try {
             // Query to get the shopping list details
             String listSql = "SELECT * FROM lists WHERE uuid = ?";

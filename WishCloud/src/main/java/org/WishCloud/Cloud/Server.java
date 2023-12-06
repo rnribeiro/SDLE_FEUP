@@ -19,14 +19,13 @@ public class Server {
     private static final int HashSpace = 1 << 31;
     private final String serverIp;
     private final int serverPort;
-    private final String serverNode;
+    private final String serverName;
     private final List<String> seeds;
-
 
     public Server(String ServerIp, int serverPort, List<String> seeds) {
         this.serverIp = ServerIp;
         this.serverPort = serverPort;
-        this.serverNode = ServerIp + ":" + serverPort;
+        this.serverName = ServerIp + ":" + serverPort;
         this.seeds = seeds;
     }
 
@@ -39,7 +38,7 @@ public class Server {
             // compute ring
             Ring ring = new Ring(HashSpace);
             for (String seed : this.seeds) { ring.addNode(seed, 10); }
-            if (!this.seeds.contains(this.serverNode)) { ring.addNode(this.serverNode, 10); }
+            if (!this.seeds.contains(this.serverName)) { ring.addNode(this.serverName, 10); }
 
             // thread pool
             ThreadPoolExecutor threadPoolExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(10);
@@ -49,8 +48,7 @@ public class Server {
 
             // create contexts
             server.createContext("/create", new CreateHandler());
-            server.createContext("/update", new UpdateHandler());
-            server.createContext("/delete", new DeleteHandler());
+            server.createContext("/synchronize", new UpdateHandler());
             server.createContext("/read", new ReadHandler());
             server.createContext("/refresh", new RefreshHandler());
 
@@ -59,7 +57,7 @@ public class Server {
 
             // Start the server
             server.start();
-            System.out.println("Server started on http://" + this.serverNode);
+            System.out.println("Server started on http://" + this.serverName);
 
             // Add a shutdown hook to stop the server
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -70,6 +68,14 @@ public class Server {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public static void main(String[] args) {
+        // create server
+        Server server = new Server("localhost", 8000, List.of("localhost:8000", "localhost:8001"));
+
+        // start server
+        server.start();
     }
 }
 
