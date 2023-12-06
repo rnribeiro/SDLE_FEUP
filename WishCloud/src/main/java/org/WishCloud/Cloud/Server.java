@@ -3,7 +3,7 @@ package org.WishCloud.Cloud;
 import org.WishCloud.Database.SQl;
 import org.WishCloud.Cloud.Handlers.CreateHandler;
 import org.WishCloud.Cloud.Handlers.ReadHandler;
-import org.WishCloud.Cloud.Handlers.UpdateHandler;
+import org.WishCloud.Cloud.Handlers.SynchroniseHandler;
 import org.WishCloud.Cloud.Handlers.DeleteHandler;
 import org.WishCloud.Cloud.Handlers.RefreshHandler;
 
@@ -49,7 +49,7 @@ public class Server {
 
             // create contexts
             server.createContext("/create", new CreateHandler());
-            server.createContext("/update", new UpdateHandler());
+            server.createContext("/update", new SynchroniseHandler(ring));
             server.createContext("/delete", new DeleteHandler());
             server.createContext("/read", new ReadHandler());
             server.createContext("/refresh", new RefreshHandler());
