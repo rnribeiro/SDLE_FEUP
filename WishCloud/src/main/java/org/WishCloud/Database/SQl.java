@@ -27,8 +27,8 @@ public class SQl {
             	FOREIGN KEY (list_uuid) REFERENCES lists (uuid)
             );""";
 
-    public SQl(String dbName) {
-        this.dbName = dbName;
+    public SQl(String clientUUID) {
+        this.dbName = "db_" + clientUUID + ".db";
     }
 
     public void createDB() {

@@ -4,22 +4,42 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Scanner;
 import java.util.UUID;
 import org.WishCloud.Client.UI.ShoppingInterface;
 import org.WishCloud.Database.SQl;
 import org.WishCloud.ShoppingList.ShoppingList;
+import org.WishCloud.Utils.Ring;
 import org.WishCloud.Utils.Serializer;
 
 
 public class Client {
 
-    private static SQl db = new SQl("local_shopping.db");
+    private static String clientUUID;
+    private static SQl db;
+    private static Ring ring;
+    private static List<String> seeds;
+    private static final int HashSpace = 1 << 31;
 
     public static void main(String[] args) {
+
+        seeds = List.of("localhost:8000", "localhost:8001", "localhost:8002");
+        ring = new Ring(HashSpace);
+
+        for (String seed : seeds) { ring.addNode(seed, 10); }
+
+        clientUUID = generateUUID();
+        System.out.println("Client UUID: " + clientUUID);
+
+        db = new SQl(clientUUID); // Create a database instance specific to this client
         db.connect();
         Scanner scanner = new Scanner(System.in);
 
@@ -40,6 +60,11 @@ public class Client {
         }
     }
 
+    public static String generateUUID() {
+        UUID uuid = UUID.randomUUID();
+        return uuid.toString();
+    }
+
     private static void handleCreateList(Scanner scanner) {
         String listName = ShoppingInterface.promptForListName(scanner);
         String listUUID = UUID.randomUUID().toString();
@@ -56,18 +81,32 @@ public class Client {
 
     private static boolean synchronizeListWithServer(String listUUID, byte[] serializedList) {
         try {
-            URL url = new URL("http://" + SERVER_IP + ":" + SERVER_PORT + "/create");
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setDoOutput(true);
-            conn.getOutputStream().write(serializedList);
+            List<String> preferenceList = ring.getPreferenceList(listUUID, 3);
+            for (String server : preferenceList) {
 
-            int responseCode = conn.getResponseCode();
-            return responseCode == HttpURLConnection.HTTP_OK;
+                HttpClient client = HttpClient.newHttpClient();
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create("http://" + server + "/create?uuid=" + listUUID))
+                        .POST(HttpRequest.BodyPublishers.ofByteArray(serializedList))
+                        .build();
+
+                try {
+                    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+                    if (response.statusCode() == 200) {
+                        System.out.println("\nReplica in " + server + " created! Server Response: " + response.body());
+                        return true;
+                    }
+                } catch (InterruptedException e) {
+                    System.out.println(e.getMessage());
+                }
+
+            }
+
         } catch (IOException e) {
             e.printStackTrace();
             return false;
         }
+        return false;
     }
 
     private static ShoppingList getListFromServerOrLocal(String listUUID) {
