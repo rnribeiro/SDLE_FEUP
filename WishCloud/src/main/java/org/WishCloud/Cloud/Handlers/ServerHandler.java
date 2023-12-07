@@ -8,7 +8,6 @@ import org.WishCloud.Utils.Ring;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.http.HttpResponse;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -54,11 +53,7 @@ public abstract class ServerHandler implements HttpHandler {
         return db;
     }
 
-    public Ring getRing() {
-        return ring;
-    }
+    public Ring getRing() { return ring; }
 
-    public String getServerName() {
-        return serverName;
-    }
+    public String getServerName() { return serverName; }
 }

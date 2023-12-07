@@ -51,7 +51,7 @@ public class Server {
             // create contexts
             server.createContext("/create", new CreateHandler(this.serverName, ring, db));
             server.createContext("/synchronize", new SynchroniseHandler(ring, this.serverName, db));
-            server.createContext("/read", new ReadHandler());
+            server.createContext("/read", new ReadHandler(this.serverName, ring, db));
             server.createContext("/refresh", new RefreshHandler());
 
             // set executor

@@ -29,7 +29,7 @@ public class CreateHandler extends ServerHandler {
         byte[] body = exchange.getRequestBody().readAllBytes();
 
         if (!method.equals("POST") || !path.equals("/create")
-                || !params.containsKey("uuid") || !params.containsKey("author")) {
+                || !params.containsKey("uuid")) {
             sendResponse(exchange, 400, "Invalid request!");
             return;
         }
@@ -37,7 +37,7 @@ public class CreateHandler extends ServerHandler {
 
         // check if the shopping list is null or already exists in database
         ShoppingList shoppingList;
-        if (getDb().getShoppingList(params.get("uuid")) == null) {
+        if (getDb().getShoppingList(params.get("uuid")) != null) {
             sendResponse(exchange, 400, "Shopping list already exists!");
             return;
         } else if ((shoppingList = Serializer.deserialize(body)) == null) {
@@ -52,7 +52,7 @@ public class CreateHandler extends ServerHandler {
                 // send the shopping list to the next server in the ring
                 HttpClient client = HttpClient.newHttpClient();
                 HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create("http://" + server + "/create?uuid=" + params.get("uuid") + "&author=" + getServerName()))
+                        .uri(URI.create("http://" + server + "/create?uuid=" + params.get("uuid")))
                         .POST(HttpRequest.BodyPublishers.ofByteArray(body))
                         .build();
 
