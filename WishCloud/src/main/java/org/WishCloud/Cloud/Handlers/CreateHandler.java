@@ -9,8 +9,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import java.net.http.HttpClient;
 import com.sun.net.httpserver.HttpExchange;
@@ -29,7 +28,7 @@ public class CreateHandler extends ServerHandler {
         byte[] body = exchange.getRequestBody().readAllBytes();
 
         if (!method.equals("POST") || !path.equals("/create")
-                || !params.containsKey("uuid")) {
+                || !params.containsKey("uuid") || !params.containsKey("cord")) {
             sendResponse(exchange, 400, "Invalid request!");
             return;
         }
@@ -43,34 +42,56 @@ public class CreateHandler extends ServerHandler {
         } else if ((shoppingList = Serializer.deserialize(body)) == null) {
             sendResponse(exchange, 400, "Shopping list corrupted!");
             return;
+        } else if (getDb().insertSL(shoppingList)) {
+            // when implementing hinted handoff, this will be changed to insertSL(shoppingList, params.get("hinted")))
+            sendResponse(exchange, 500, "Error loading shopping list on database!");
+            return;
         }
 
-        int replicas = 2;
-        List<String> preferenceList = getRing().getPreferenceList(params.get("uuid"), replicas);
-        if (preferenceList.get(0).equals(getServerName())) {
-            for (String server : preferenceList.subList(1, preferenceList.size())) {
-                // send the shopping list to the next server in the ring
-                HttpClient client = HttpClient.newHttpClient();
-                HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create("http://" + server + "/create?uuid=" + params.get("uuid")))
-                        .POST(HttpRequest.BodyPublishers.ofByteArray(body))
-                        .build();
+        if (!params.get("cord").equals("true")) { return; }
 
-                try {
-                    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-                    if (response.statusCode() == 200) {
-                        System.out.println("\nReplica in " + server + " created! Server Response: " + response.body());
-                        replicas--;
-                    }
-                } catch (InterruptedException e) {
-                    System.out.println(e.getMessage());
+        List<String> orderedNodes = getRing().getPreferenceList(params.get("uuid"));
+        List<String> preferenceList = getRing().getPreferenceList(params.get("uuid"), this.replicas);
+        Set<String> servedNodes = new HashSet<>();
+        Set<String> hintedNodes = new HashSet<>();
+        servedNodes.add(getServerName());
+        for (String server : orderedNodes.subList(orderedNodes.indexOf(getServerName())+1, orderedNodes.size())) {
+            // Check if the replica creation was successful
+            if (servedNodes.size() == this.replicas) { break; }
+
+            String hintedNode = null;
+            StringBuilder url = new StringBuilder("http://" + server + "/create?uuid=" + params.get("uuid") + "&cord=false");
+            if (!preferenceList.contains(server)) {
+                // find server in the preference list that was not served yet
+                 hintedNode = preferenceList.stream()
+                        .filter(node -> !servedNodes.contains(node) && !hintedNodes.contains(node))
+                        .findFirst().orElse(null);
+                url.append("&hinted=").append(hintedNode);
+            }
+
+            // send the shopping list to the next server in the ring
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url.toString()))
+                    .POST(HttpRequest.BodyPublishers.ofByteArray(body))
+                    .build();
+
+            try {
+                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+                if (response.statusCode() == 200) {
+                    System.out.println("\nReplica in " + server + " created! Server Response: " + response.body());
+                    servedNodes.add(server);
+                    if (hintedNode != null) { hintedNodes.add(hintedNode); }
                 }
+            } catch (InterruptedException e) {
+                System.out.println(e.getMessage());
             }
         }
 
-        // save the shopping list to the database
-        if (getDb().insertSL(shoppingList)) {
-            sendResponse(exchange, 500, "Error loading shopping list on database!");
+        if (servedNodes.size() != this.replicas) {
+            sendResponse(exchange, 500, "Error creating replicas!");
+            // undo the creation of the shopping list both in the database and in the replicas
+            return;
         }
 
         sendResponse(exchange, 200, "Shopping list created!");

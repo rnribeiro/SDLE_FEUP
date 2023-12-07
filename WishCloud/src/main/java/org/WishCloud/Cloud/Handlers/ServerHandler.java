@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public abstract class ServerHandler implements HttpHandler {
+    protected final int replicas = 3;
     protected final String serverName;
     protected final Ring ring;
     protected final SQl db;
