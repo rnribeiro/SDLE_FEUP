@@ -33,7 +33,7 @@ public class ShoppingInterface {
         if (success) {
             System.out.println("List synchronized with server successfully.");
         } else {
-            System.out.println("Failed to synchronize list with server.");
+            System.out.println("Failed to synchronize list with cloud.");
         }
     }
 
@@ -51,6 +51,11 @@ public class ShoppingInterface {
         System.out.printf("%-20s | %-10s | %-10s | %-20s\n", "Item Name", "Value", "Counter", "Author");
         System.out.println("------------------------------------------------------------");
 
+        if (shoppingList.getListItems().isEmpty()) {
+            System.out.println("List is empty.\n\n");
+            return;
+        }
+
         for (Map.Entry<String, CRDT<String>> entry : shoppingList.getListItems().entrySet()) {
             String itemName = entry.getKey();
             CRDT<String> crdtItem = entry.getValue();
@@ -59,6 +64,22 @@ public class ShoppingInterface {
             String author = crdtItem.getClientID();
 
             System.out.printf("%-20s | %-10d | %-10d | %-20s\n", itemName, value, counter, author);
+        }
+    }
+
+    public static void displayItemUpdateSuccess(boolean syncSuccess) {
+        if (syncSuccess) {
+            System.out.println("Item updated successfully in cloud.");
+        } else {
+            System.out.println("Item updated locally. Failed to synchronize with cloud.");
+        }
+    }
+
+    public static void displayItemRemovalSuccess(boolean syncSuccess) {
+        if (syncSuccess) {
+            System.out.println("Item removed successfully in cloud.");
+        } else {
+            System.out.println("Item removed locally. Failed to synchronize with cloud.");
         }
     }
 }
