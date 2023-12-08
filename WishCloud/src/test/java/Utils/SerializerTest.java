@@ -1,3 +1,5 @@
+package Utils;
+
 import org.WishCloud.CRDT.CRDT;
 import org.WishCloud.ShoppingList.ShoppingList;
 import org.WishCloud.Utils.Serializer;

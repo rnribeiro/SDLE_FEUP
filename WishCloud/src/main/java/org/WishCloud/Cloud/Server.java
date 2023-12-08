@@ -1,19 +1,16 @@
 package org.WishCloud.Cloud;
 
+import org.WishCloud.Cloud.Handlers.UpdateHandler;
 import org.WishCloud.Database.SQl;
 import org.WishCloud.Cloud.Handlers.CreateHandler;
 import org.WishCloud.Cloud.Handlers.ReadHandler;
-import org.WishCloud.Cloud.Handlers.SynchroniseHandler;
-import org.WishCloud.Cloud.Handlers.DeleteHandler;
 import org.WishCloud.Cloud.Handlers.RefreshHandler;
 
 import com.sun.net.httpserver.HttpServer;
 import org.WishCloud.Utils.Ring;
 
 import java.net.InetSocketAddress;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
@@ -50,8 +47,8 @@ public class Server {
 
             // create contexts
             server.createContext("/create", new CreateHandler(this.serverName, ring, db));
-            server.createContext("/synchronize", new SynchroniseHandler(ring, this.serverName, db));
             server.createContext("/read", new ReadHandler(this.serverName, ring, db));
+            server.createContext("/update", new UpdateHandler(this.serverName, ring, db));
             server.createContext("/refresh", new RefreshHandler());
 
             // set executor

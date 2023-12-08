@@ -5,13 +5,14 @@ import org.WishCloud.ShoppingList.ShoppingList;
 import org.WishCloud.CRDT.CRDT;
 import org.WishCloud.Utils.Serializer;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.Map;
 
 public class Main {
     public static void main(String[] args) {
-
-        SQl sql = new SQl("test.db");
-        sql.createDB();
 
         // create shopping list
         Map<String,CRDT<String>> listItems = Map.of(
@@ -19,16 +20,25 @@ public class Main {
                 "item2", new CRDT<>("1", 2, "client2"),
                 "item3", new CRDT<>("0", 3, "client3")
         );
-        ShoppingList shoppingList1 = new ShoppingList("test", "test", listItems);
+        ShoppingList shoppingList = new ShoppingList("test", "test", listItems);
 
-        sql.insertSL(shoppingList1);
+        System.out.println(shoppingList);
 
-        System.out.println(shoppingList1);
+        byte[] buffer = Serializer.serialize(shoppingList);
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder(
+                        URI.create("http://localhost:8000/create?uuid=test"))
+                .header("accept", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofByteArray(buffer))
+                .build();
 
-        byte[] str = Serializer.serialize(shoppingList1);
-        ShoppingList shoppingList2 = Serializer.deserialize(str);
+        try {
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            System.out.println(response.body());
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
 
-        System.out.println(shoppingList2);
         /*
         client
             create list id - done

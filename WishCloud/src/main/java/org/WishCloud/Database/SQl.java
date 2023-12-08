@@ -196,9 +196,10 @@ public class SQl {
         return shoppingList;
     }
 
-    public synchronized void updateShoppingList(ShoppingList updatedList) {
+    public synchronized boolean updateShoppingList(ShoppingList updatedList) {
         connect();
         beginTransaction();
+        boolean error = false;
 
         try {
             String uuid = updatedList.getListID();
@@ -238,10 +239,14 @@ public class SQl {
             commitTransaction();
         } catch (SQLException e) {
             System.out.println(e.getMessage());
+            error = true;
             rollbackTransaction();
         } finally {
             close();
         }
+
+        return error;
     }
+
 
 }
