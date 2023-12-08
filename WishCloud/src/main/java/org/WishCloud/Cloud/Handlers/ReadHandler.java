@@ -47,7 +47,7 @@ public class ReadHandler extends ServerHandler {
             sendResponse(exchange, 200, Arrays.toString(Serializer.serialize(shoppingList)));
             return;
         }
-
+        ShoppingList mergedSL = null;
         int replicasRemaining = this.replicas - 1;
         List<String> orderedList = getRing().getPreferenceList(params.get("uuid"));
         for (String server : orderedList.subList(orderedList.indexOf(getServerName()) + 1, orderedList.size())) {
@@ -65,7 +65,7 @@ public class ReadHandler extends ServerHandler {
                 if (response.statusCode() == 200) {
                     System.out.println("\nReplica in " + server + " created! Server Response: " + response.body());
                     ShoppingList newSL = Serializer.deserialize(response.body().getBytes());
-                    shoppingList.merge(newSL.getListItems());
+                    mergedSL = shoppingList.merge(newSL.getListItems());
                     replicasRemaining--;
                 }
             } catch (InterruptedException e) {
@@ -77,7 +77,10 @@ public class ReadHandler extends ServerHandler {
             sendResponse(exchange, 500, "Error loading shopping list on database!");
             return;
         }
-
-        sendResponse(exchange, 200, Arrays.toString(Serializer.serialize(shoppingList)));
+        if (mergedSL == null) {
+            sendResponse(exchange, 500, "Error loading shopping list on database!");
+            return;
+        }
+        sendResponse(exchange, 200, Arrays.toString(Serializer.serialize(mergedSL)));
     }
 }

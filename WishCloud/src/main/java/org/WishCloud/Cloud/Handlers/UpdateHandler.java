@@ -41,14 +41,31 @@ public class UpdateHandler extends ServerHandler {
         ShoppingList clientSl = Serializer.deserialize(body);
         if (localSL == null) {
             sendResponse(exchange, 400, "Shopping list doesn't exist!");
+//            // build create request
+//            HttpClient client = HttpClient.newHttpClient();
+//            HttpRequest request = HttpRequest.newBuilder()
+//                    .uri(URI.create("http://" + getServerName() + "/create?uuid=" + params.get("uuid") + "&cord=false"))
+//                    .POST(HttpRequest.BodyPublishers.ofByteArray(body))
+//                    .build();
+//
+//            try {
+//                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+//                if (response.statusCode() == 200) {
+//                    System.out.println("\nReplica in " + getServerName() + " created! Server Response: " + response.body());
+//                }
+//            } catch (InterruptedException e) {
+//                System.out.println(e.getMessage());
+//            } finally {
+//                sendResponse(exchange, 200, "Shopping list created!");
+//            }
             return;
         } else if (clientSl == null) {
             sendResponse(exchange, 400, "Shopping list corrupted!");
             return;
         }
 
-        localSL.merge(clientSl.getListItems());
-        if (getDb().updateShoppingList(localSL)) {
+        ShoppingList mergedSL = localSL.merge(clientSl.getListItems());
+        if (getDb().updateShoppingList(mergedSL)) {
             sendResponse(exchange, 500, "Error updating shopping list on database!");
             return;
         }
@@ -84,7 +101,7 @@ public class UpdateHandler extends ServerHandler {
             try {
                 HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() == 200) {
-                    System.out.println("\nReplica in " + server + " created! Server Response: " + response.body());
+                    System.out.println("\nReplica in " + server + " updated! Server Response: " + response.body());
                     servedNodes.add(server);
                     if (hintedNode != null) { hintedNodes.add(hintedNode); }
                 }
