@@ -327,11 +327,16 @@ public class Client {
             // getting list from server
             System.out.println("\nAttempting to get list from cloud...");
             List<String> preferenceList = ring.getPreferenceList(listUUID, 3);
+            // print the preference list
+            System.out.println("\nPreference List:");
+            for (String server : preferenceList) {
+                System.out.println(server);
+            }
             int serversDown = 0;
             for (String server : preferenceList) {
                 HttpClient client = HttpClient.newHttpClient();
                 HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create("http://" + server + "/read?uuid=" + listUUID))
+                        .uri(URI.create("http://" + server + "/read?uuid=" + listUUID + "&cord=true"))
                         .GET()
                         .build();
 
@@ -350,6 +355,7 @@ public class Client {
                         byte[] serializedList = buffer.toByteArray();
                         return Serializer.deserialize(serializedList);
                     } else {
+                        System.out.println(response.statusCode());
                         System.out.println("\nFailed to read from server " + server +"! Server Response: " + response.body());
                     }
                 } catch (InterruptedException | ConnectException e) {
