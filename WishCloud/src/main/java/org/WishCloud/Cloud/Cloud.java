@@ -1,12 +1,23 @@
 package org.WishCloud.Cloud;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class Cloud {
 
     public static void main(String[] args) {
         // Define seeds for the ring
-        List<String> seeds = List.of("localhost:8000", "localhost:8001", "localhost:8002");
+        int numberOfSeeds; // Change this to the desired number of seeds
+        if (args.length > 0) {
+            numberOfSeeds = Integer.parseInt(args[0]);
+        } else {
+            numberOfSeeds = 3;
+        }
+        List<String> seeds = new ArrayList<>();
+
+        for (int i = 0; i < numberOfSeeds; i++) {
+            seeds.add("localhost:80" + (i < 10 ? "0" + i : i));
+        }
 
         // Loop through the seeds and start a server for each one
         for (String seed : seeds) {
