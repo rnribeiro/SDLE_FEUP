@@ -42,7 +42,7 @@ public class ShoppingInterface {
     }
 
     public static void displayListNotFound() {
-        System.out.println("List not found or empty.");
+        System.out.println("List not found!");
     }
 
     public static void displayShoppingList(ShoppingList shoppingList) {

@@ -31,7 +31,7 @@ public class Server {
     public void start() {
         try {
             // create database
-            SQl db = new SQl(this.serverIp + "_" + this.serverPort + ".db");
+            SQl db = new SQl(this.serverIp + "_" + this.serverPort);
             db.createDB();
 
             // compute ring

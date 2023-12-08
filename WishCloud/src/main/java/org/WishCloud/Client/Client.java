@@ -36,6 +36,7 @@ public class Client {
         for (String seed : seeds) { ring.addNode(seed, 10); }
 
         clientUUID = generateUUID();
+//        clientUUID = "64c4090b-5ccf-47a2-a492-9c03794a5b35";
         System.out.println("Client UUID: " + clientUUID);
 
         db = new SQl(clientUUID); // Create a database instance specific to this client
@@ -97,12 +98,11 @@ public class Client {
     private static boolean synchronizeListWithServer(String listUUID, byte[] serializedList) {
         try {
             List<String> preferenceList = ring.getPreferenceList(listUUID, 3);
-            int missingReplicas = 3 - preferenceList.size();
             for (String server : preferenceList) {
 
                 HttpClient client = HttpClient.newHttpClient();
                 HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create("http://" + server + "/create?uuid=" + listUUID))
+                        .uri(URI.create("http://" + server + "/create?uuid=" + listUUID + "&cord=true"))
                         .POST(HttpRequest.BodyPublishers.ofByteArray(serializedList))
                         .build();
 
@@ -111,13 +111,16 @@ public class Client {
                     if (response.statusCode() == 200) {
                         System.out.println("\nReplica in " + server + " created! Server Response: " + response.body());
                         return true;
+                    } else {
+                        System.out.println("\nReplica in " + server + " failed! Server Response: " + response.body());
                     }
+
                 } catch (ConnectException | InterruptedException e) {
-                    missingReplicas--;
+                    System.out.println(e.getMessage());
                 }
 
             }
-            return missingReplicas == 0;
+            return false;
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -127,12 +130,22 @@ public class Client {
 
     private static ShoppingList getListFromServerOrLocal(String listUUID) {
         ShoppingList shoppingList = getListFromServer(listUUID);
+        ShoppingList list = null;
         if (shoppingList == null) {
             db.connect();
-            shoppingList = db.getShoppingList(listUUID);
+            list = db.getShoppingList(listUUID);
 //            db.close();
+        } else {
+            // merge the local list with the server list
+            db.connect();
+            ShoppingList localList = db.getShoppingList(listUUID);
+//            db.close();
+            if (localList != null) {
+                list = shoppingList.merge(localList.getListItems());
+            }
         }
-        return shoppingList;
+
+        return list;
     }
 
     public static void handleAccessList(Scanner scanner, String listUUID) {
@@ -193,7 +206,7 @@ public class Client {
 
         // try updating the list in the database
         db.connect();
-        if (db.updateShoppingList(shoppingList)) {
+        if (!db.updateShoppingList(shoppingList)) {
             System.out.println("Item locally updated successfully.");
         } else {
             System.out.println("Failed to update item.");
@@ -228,12 +241,11 @@ public class Client {
     private static boolean updateListInCloud(String listID, byte[] serializedList) {
         try {
             List<String> preferenceList = ring.getPreferenceList(listID, 3);
-            int missingReplicas = 3 - preferenceList.size();
             for (String server : preferenceList) {
 
                 HttpClient client = HttpClient.newHttpClient();
                 HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create("http://" + server + "/update?uuid=" + listID))
+                        .uri(URI.create("http://" + server + "/update?uuid=" + listID + "&cord=true"))
                         .POST(HttpRequest.BodyPublishers.ofByteArray(serializedList))
                         .build();
 
@@ -242,13 +254,15 @@ public class Client {
                     if (response.statusCode() == 200) {
                         System.out.println("\nReplica in " + server + " updated! Server Response: " + response.body());
                         return true;
+                    } else {
+                        System.out.println("\nReplica in " + server + " failed! Server Response: " + response.body());
                     }
                 } catch (ConnectException | InterruptedException e) {
-                    missingReplicas--;
+                    System.out.println("\nReplica in " + server + " failed!" + e.getMessage());
                 }
 
             }
-            return missingReplicas == 0;
+            return false;
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -268,7 +282,7 @@ public class Client {
 
         // try updating the list in the database
         db.connect();
-        if (db.updateShoppingList(shoppingList)) {
+        if (!db.updateShoppingList(shoppingList)) {
             System.out.println("Item locally added successfully.");
         } else {
             System.out.println("Failed to add item.");
@@ -277,7 +291,7 @@ public class Client {
 
 
         byte[] serializedList = Serializer.serialize(shoppingList);
-        boolean syncSuccess = synchronizeListWithServer(shoppingList.getListID(), serializedList);
+        boolean syncSuccess = updateListInCloud(shoppingList.getListID(), serializedList);
         ShoppingInterface.displaySynchronizationStatus(syncSuccess);
         handleAccessList(scanner, shoppingList.getListID());
     }
@@ -321,8 +335,6 @@ public class Client {
         }
         return null;
     }
-
-
 
 
 }
