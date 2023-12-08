@@ -48,7 +48,10 @@ public class CreateHandler extends ServerHandler {
             return;
         }
 
-        if (!params.get("cord").equals("true")) { return; }
+        if (!params.get("cord").equals("true")) {
+            sendResponse(exchange, 200, "Shopping list created!");
+            return;
+        }
 
         List<String> orderedNodes = getRing().getPreferenceList(params.get("uuid"));
         List<String> preferenceList = getRing().getPreferenceList(params.get("uuid"), this.replicas);

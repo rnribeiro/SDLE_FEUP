@@ -225,7 +225,7 @@ public class Client {
 
         // try updating the list in the database
         db.connect();
-        if (db.updateShoppingList(shoppingList)) {
+        if (!db.updateShoppingList(shoppingList)) {
             System.out.println("Item locally removed successfully.");
         } else {
             System.out.println("Failed to remove item.");
