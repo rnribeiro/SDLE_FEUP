@@ -16,8 +16,14 @@ public class ShoppingInterface {
     }
 
     public static String promptForListName(Scanner scanner) {
+        clearConsole();
         System.out.print("Enter List Name: ");
         return scanner.next();
+    }
+
+    public static void clearConsole() {
+        System.out.print("\033[H\033[2J");
+        System.out.flush();
     }
 
     public static String promptForListUUID(Scanner scanner) {
@@ -26,22 +32,25 @@ public class ShoppingInterface {
     }
 
     public static void displayCreationSuccess(String listUUID) {
-        System.out.println("List created successfully. UUID: " + listUUID);
+        System.out.println("List created locally successfully. UUID: " + listUUID);
     }
 
     public static void displaySynchronizationStatus(boolean success) {
         if (success) {
-            System.out.println("List synchronized with server successfully.");
+            System.out.println("List synchronized with cloud successfully.");
         } else {
             System.out.println("Failed to synchronize list with cloud.");
         }
     }
 
     public static void displayInvalidChoice() {
+        clearConsole();
         System.out.println("Invalid choice. Please try again.");
     }
 
     public static void displayListNotFound() {
+        clearConsole();
+
         System.out.println("List not found!");
     }
 
@@ -82,4 +91,6 @@ public class ShoppingInterface {
             System.out.println("Item removed locally. Failed to synchronize with cloud.");
         }
     }
+
+
 }
