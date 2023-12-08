@@ -34,13 +34,15 @@ public class SQl {
     public void createDB() {
         String path = System.getProperty("user.dir");
         Path fullPath = Paths.get(path, "DBs", this.dbName);
+        fullPath.getParent().toFile().mkdirs();
         String url = "jdbc:sqlite:" + fullPath;
+
 
         try {
             this.conn = DriverManager.getConnection(url);
             if (this.conn != null) {
                 DatabaseMetaData meta = conn.getMetaData();
-                System.out.println("The driver name is " + meta.getDriverName());
+//                System.out.println("The driver name is " + meta.getDriverName());
                 System.out.println("Connected to database.");
 
                 Statement stmt = conn.createStatement();
