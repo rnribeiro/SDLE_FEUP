@@ -40,6 +40,7 @@ public class Client {
         System.out.println("Client UUID: " + clientUUID);
 
         db = new SQl(clientUUID); // Create a database instance specific to this client
+        db.createDB(); // Create the database
         db.connect();
         Scanner scanner = new Scanner(System.in);
 
