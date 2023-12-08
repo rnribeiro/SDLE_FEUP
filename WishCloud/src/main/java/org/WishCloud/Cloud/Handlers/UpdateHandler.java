@@ -104,9 +104,14 @@ public class UpdateHandler extends ServerHandler {
             try {
                 HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() == 200) {
-                    System.out.println("\nReplica in " + server + " updated! Server Response: " + response.body());
+
+                    System.out.println("\nUpdated replica of list "+ params.get("uuid") + " in " + server + "! Server Response: " + response.body());
                     servedNodes.add(server);
                     if (hintedNode != null) { hintedNodes.add(hintedNode); }
+                } else {
+                    // print "Server name says:"
+                    System.out.println("\nFailed to update replica of list "+ params.get("uuid") + " in " + server + "! Server Response: " + response.body());
+
                 }
             } catch (InterruptedException e) {
                 System.out.println(e.getMessage());
