@@ -41,7 +41,9 @@ public class Client {
             seeds.add("localhost:80" + (i < 10 ? "0" + i : i));
         }
 
-        for (String seed : seeds) { ring.addNode(seed, 10); }
+        for (String seed : seeds) {
+            ring.addNode(seed, 10);
+        }
 
         // get client UUID from args or generate a new one
         if (args.length > 1) {
@@ -99,12 +101,11 @@ public class Client {
 
         ShoppingList shoppingList = new ShoppingList(listName, listUUID, new HashMap<>());
         db.connect();
-        db.insertSL(shoppingList);
+        ShoppingInterface.displayCreationSuccess(listUUID, db.insertSL(shoppingList));
 //        db.close();
         byte[] serializedList = Serializer.serialize(shoppingList);
         boolean syncSuccess = synchronizeListWithServer(listUUID, serializedList);
 
-        ShoppingInterface.displayCreationSuccess(listUUID);
         ShoppingInterface.displaySynchronizationStatus(syncSuccess);
     }
 

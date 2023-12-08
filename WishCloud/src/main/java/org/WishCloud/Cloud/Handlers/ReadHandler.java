@@ -71,6 +71,7 @@ public class ReadHandler extends ServerHandler {
                     System.out.println("\nError reading replica of list " + params.get("uuid") + " from " +  server + "! Server Response: " + response.body());
                 }
             } catch (InterruptedException e) {
+                System.out.println("\nError reading replica of list " + params.get("uuid") + " from " +  server + "!");
                 System.out.println(e.getMessage());
             }
         }

@@ -31,8 +31,12 @@ public class ShoppingInterface {
         return scanner.next();
     }
 
-    public static void displayCreationSuccess(String listUUID) {
-        System.out.println("List created locally successfully. UUID: " + listUUID);
+    public static void displayCreationSuccess(String listUUID, boolean error) {
+        if (!error) {
+            System.out.println("List created successfully locally. UUID: " + listUUID);
+        } else {
+            System.out.println("Failed to create list locally.");
+        }
     }
 
     public static void displaySynchronizationStatus(boolean success) {
