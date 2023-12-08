@@ -7,10 +7,7 @@ import java.net.*;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Scanner;
-import java.util.UUID;
+import java.util.*;
 
 import org.WishCloud.CRDT.CRDT;
 import org.WishCloud.Client.UI.ShoppingInterface;
@@ -30,13 +27,29 @@ public class Client {
 
     public static void main(String[] args) {
 
-        seeds = List.of("localhost:8000", "localhost:8001", "localhost:8002");
         ring = new Ring(HashSpace);
+
+        int numberOfSeeds; // Change this to the desired number of seeds
+        if (args.length > 0) {
+            numberOfSeeds = Integer.parseInt(args[0]);
+        } else {
+            numberOfSeeds = 3;
+        }
+        seeds = new ArrayList<>();
+
+        for (int i = 0; i < numberOfSeeds; i++) {
+            seeds.add("localhost:80" + (i < 10 ? "0" + i : i));
+        }
 
         for (String seed : seeds) { ring.addNode(seed, 10); }
 
-        clientUUID = generateUUID();
-//        clientUUID = "64c4090b-5ccf-47a2-a492-9c03794a5b35";
+        // get client UUID from args or generate a new one
+        if (args.length > 1) {
+            clientUUID = args[1];
+        } else {
+            clientUUID = generateUUID();
+        }
+        ShoppingInterface.clearConsole();
         System.out.println("Client UUID: " + clientUUID);
 
         db = new SQl(clientUUID); // Create a database instance specific to this client
@@ -97,7 +110,14 @@ public class Client {
 
     private static boolean synchronizeListWithServer(String listUUID, byte[] serializedList) {
         try {
+
+            System.out.println("\nAttempting to synchronize list with cloud...");
             List<String> preferenceList = ring.getPreferenceList(listUUID, 3);
+            // print the preference list
+            System.out.println("\nPreference List:");
+            for (String server : preferenceList) {
+                System.out.println(server);
+            }
             for (String server : preferenceList) {
 
                 HttpClient client = HttpClient.newHttpClient();
@@ -132,15 +152,20 @@ public class Client {
         ShoppingList shoppingList = getListFromServer(listUUID);
         ShoppingList list = null;
         if (shoppingList == null) {
+            // print getting list from local
+            System.out.println("\nAttempting to get list from local database...");
             db.connect();
             list = db.getShoppingList(listUUID);
 //            db.close();
         } else {
             // merge the local list with the server list
             db.connect();
+            System.out.println("\nAttempting to get list from local database...");
             ShoppingList localList = db.getShoppingList(listUUID);
 //            db.close();
             if (localList != null) {
+                // print merging lists
+                System.out.println("\nMerging lists...");
                 list = shoppingList.merge(localList.getListItems());
             }
         }
@@ -255,10 +280,10 @@ public class Client {
                         System.out.println("\nReplica in " + server + " updated! Server Response: " + response.body());
                         return true;
                     } else {
-                        System.out.println("\nReplica in " + server + " failed! Server Response: " + response.body());
+                        System.out.println("\nFailed to update replica in " + server + "! Server Response: " + response.body());
                     }
                 } catch (ConnectException | InterruptedException e) {
-                    System.out.println("\nReplica in " + server + " failed!" + e.getMessage());
+                    System.out.println("\nFailed to update replica in " + server + "!" + e.getMessage());
                 }
 
             }
@@ -298,6 +323,8 @@ public class Client {
 
     private static ShoppingList getListFromServer(String listUUID) {
         try {
+            // getting list from server
+            System.out.println("\nAttempting to get list from cloud...");
             List<String> preferenceList = ring.getPreferenceList(listUUID, 3);
             int serversDown = 0;
             for (String server : preferenceList) {
@@ -321,13 +348,15 @@ public class Client {
                         // Deserialize the byte array into a ShoppingList
                         byte[] serializedList = buffer.toByteArray();
                         return Serializer.deserialize(serializedList);
+                    } else {
+                        System.out.println("\nFailed to read from server " + server +"! Server Response: " + response.body());
                     }
                 } catch (InterruptedException | ConnectException e) {
                     serversDown++;
                 }
             }
             if (serversDown == 3) {
-                System.out.println("All servers are down. Please try again later.");
+                System.out.println("\nAll servers are down. Please try again later.");
                 return null;
             }
         } catch (IOException e) {
