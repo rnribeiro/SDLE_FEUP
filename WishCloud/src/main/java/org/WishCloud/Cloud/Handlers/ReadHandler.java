@@ -63,10 +63,12 @@ public class ReadHandler extends ServerHandler {
             try {
                 HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() == 200) {
-                    System.out.println("\nReplica in " + server + " created! Server Response: " + response.body());
+                    System.out.println("\nReplica of list " + params.get("uuid") + " read from " +  server + "! Server Response: " + response.body());
                     ShoppingList newSL = Serializer.deserialize(response.body().getBytes());
                     mergedSL = shoppingList.merge(newSL.getListItems());
                     replicasRemaining--;
+                } else {
+                    System.out.println("\nError reading replica of list " + params.get("uuid") + " from " +  server + "! Server Response: " + response.body());
                 }
             } catch (InterruptedException e) {
                 System.out.println(e.getMessage());
