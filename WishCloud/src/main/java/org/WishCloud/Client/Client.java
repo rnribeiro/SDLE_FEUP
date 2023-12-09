@@ -1,8 +1,6 @@
 package org.WishCloud.Client;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.*;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -29,7 +27,7 @@ public class Client {
 
         ring = new Ring(HashSpace);
 
-        int numberOfSeeds; // Change this to the desired number of seeds
+        int numberOfSeeds;
         if (args.length > 0) {
             numberOfSeeds = Integer.parseInt(args[0]);
         } else {
@@ -51,11 +49,14 @@ public class Client {
         } else {
             clientUUID = generateUUID();
         }
+
         ShoppingInterface.clearConsole();
+
         System.out.println("Client UUID: " + clientUUID);
 
-        db = new SQl(clientUUID); // Create a database instance specific to this client
+        db = new SQl(clientUUID);
         db.createDB();
+
         Scanner scanner = new Scanner(System.in);
 
         mainMenu(scanner);
@@ -69,6 +70,7 @@ public class Client {
 
     private static void mainMenu(Scanner scanner) {
         while (true) {
+            // print main menu
             ShoppingInterface.printMainMenu();
 
             int choice;
@@ -80,6 +82,7 @@ public class Client {
                 continue;
             }
 
+            // handle main menu choice
             switch (choice) {
                 case 1:
                     handleCreateList(scanner);
@@ -91,40 +94,55 @@ public class Client {
                     ShoppingInterface.displayInvalidChoice();
             }
         }
+
     }
 
     private static void handleCreateList(Scanner scanner) {
         String listName = ShoppingInterface.promptForListName(scanner);
         String listUUID = UUID.randomUUID().toString();
 
+        // create the shopping list
         ShoppingList shoppingList = new ShoppingList(listName, listUUID, new HashMap<>());
         ShoppingInterface.displayCreationSuccess(listUUID, db.insertSL(shoppingList));
+
+        // serialize the shopping list
         byte[] serializedList = Serializer.serialize(shoppingList);
+
+        // synchronize the list with the cloud
         boolean syncSuccess = synchronizeListWithServer(listUUID, serializedList);
 
+        // display synchronization status
         ShoppingInterface.displaySynchronizationStatus(syncSuccess);
     }
 
     private static boolean synchronizeListWithServer(String listUUID, byte[] serializedList) {
         try {
-
             System.out.println("\nAttempting to synchronize list with cloud...");
+
+            // get the preference list
             List<String> preferenceList = ring.getPreferenceList(listUUID, 3);
+
             // print the preference list
             System.out.println("\nPreference List:");
             for (String server : preferenceList) {
                 System.out.println(server);
             }
+
+            // loop through the preference list and try to create the list in the cloud
             for (String server : preferenceList) {
 
+                // create http client and request
                 HttpClient client = HttpClient.newHttpClient();
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create("http://" + server + "/create?uuid=" + listUUID + "&cord=true"))
                         .POST(HttpRequest.BodyPublishers.ofByteArray(serializedList))
                         .build();
 
+                // send the request
                 try {
                     HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+                    // check the response code
                     if (response.statusCode() == 200) {
                         System.out.println("\nReplica in " + server + " created! Server Response: " + response.body());
                         return true;
@@ -171,16 +189,24 @@ public class Client {
     }
 
     public static void handleAccessList(Scanner scanner, String listUUID) {
+
+        // prompt user for list UUID if not coming from list menu
         if (listUUID == null) {
             listUUID = ShoppingInterface.promptForListUUID(scanner);
         }
+
+        // get the list from the server or local database
         ShoppingList shoppingList = getListFromServerOrLocal(listUUID);
 
         if (shoppingList != null) {
+            ShoppingInterface.clearConsole();
+
+            // display the list
             ShoppingInterface.displayShoppingList(shoppingList);
+
             // Prompt user for list actions
             while (true) {
-                System.out.println("List Actions:");
+                System.out.println("\nList Actions:");
                 System.out.println("1- Add Item");
                 System.out.println("2- Update Item");
                 System.out.println("3- Exit");
@@ -212,34 +238,90 @@ public class Client {
         }
     }
 
+    private static void handleAddItem(Scanner scanner, ShoppingList shoppingList) {
+        System.out.print("Enter Item Name: ");
+        String itemName = scanner.next();
+        System.out.print("Enter Item Value: ");
+
+        int itemValue;
+        try {
+            itemValue = scanner.nextInt();
+        } catch (Exception e) {
+            ShoppingInterface.displayInvalidChoice();
+            scanner.next();
+            return;
+        }
+
+        // create CRDT for item
+        CRDT<String> crdtItem = new CRDT<>(Integer.toString(itemValue), System.currentTimeMillis(), clientUUID);
+        shoppingList.addItem(itemName, crdtItem);
+
+        // try updating the list in the database
+        if (!db.updateShoppingList(shoppingList)) {
+            System.out.println("Item locally added successfully.");
+        } else {
+            System.out.println("Failed to add item.");
+        }
+
+        // serialize the shopping list
+        byte[] serializedList = Serializer.serialize(shoppingList);
+
+        // synchronize the list with the cloud
+        boolean syncSuccess = updateListInCloud(shoppingList.getListID(), serializedList);
+
+        // display synchronization status
+        ShoppingInterface.displaySynchronizationStatus(syncSuccess);
+
+        // back to this list's menu
+        handleAccessList(scanner, shoppingList.getListID());
+    }
+
     private static void handleUpdateItem(Scanner scanner, ShoppingList shoppingList) {
         System.out.print("Enter Item Name: ");
         String itemName = scanner.next();
         System.out.print("Enter New Item Value: ");
-        int itemValue = scanner.nextInt();
+
+        int itemValue;
+        try {
+            itemValue = scanner.nextInt();
+        } catch (Exception e) {
+            ShoppingInterface.displayInvalidChoice();
+            scanner.next();
+            return;
+        }
 
         // create CRDT object
         CRDT<String> crdtItem = new CRDT<>(Integer.toString(itemValue), System.currentTimeMillis(), clientUUID);
         shoppingList.updateItem(itemName, crdtItem);
 
         // try updating the list in the database
-
         if (!db.updateShoppingList(shoppingList)) {
             System.out.println("Item locally updated successfully.");
         } else {
             System.out.println("Failed to update item.");
         }
+
+        // serialize the shopping list
         byte[] serializedList = Serializer.serialize(shoppingList);
+
+        // synchronize the list with the cloud
         boolean syncSuccess = updateListInCloud(shoppingList.getListID(), serializedList);
+
+        // display synchronization status
         ShoppingInterface.displayItemUpdateSuccess(syncSuccess);
+
+        // back to this list's menu
         handleAccessList(scanner, shoppingList.getListID());
     }
 
     private static boolean updateListInCloud(String listID, byte[] serializedList) {
         try {
+            // get the preference list
             List<String> preferenceList = ring.getPreferenceList(listID, 3);
+
             for (String server : preferenceList) {
 
+                // create http client and request
                 HttpClient client = HttpClient.newHttpClient();
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create("http://" + server + "/update?uuid=" + listID + "&cord=true"))
@@ -247,7 +329,10 @@ public class Client {
                         .build();
 
                 try {
+                    // send the request
                     HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+                    // check the response code
                     if (response.statusCode() == 200) {
                         System.out.println("\nReplica in " + server + " updated! Server Response: " + response.body());
                         return true;
@@ -267,41 +352,25 @@ public class Client {
         }
     }
 
-    private static void handleAddItem(Scanner scanner, ShoppingList shoppingList) {
-        System.out.print("Enter Item Name: ");
-        String itemName = scanner.next();
-        System.out.print("Enter Item Value: ");
-        int itemValue = scanner.nextInt();
-
-        // create CRDT object
-        CRDT<String> crdtItem = new CRDT<>(Integer.toString(itemValue), System.currentTimeMillis(), clientUUID);
-        shoppingList.addItem(itemName, crdtItem);
-
-        // try updating the list in the database
-        if (!db.updateShoppingList(shoppingList)) {
-            System.out.println("Item locally added successfully.");
-        } else {
-            System.out.println("Failed to add item.");
-        }
-
-        byte[] serializedList = Serializer.serialize(shoppingList);
-        boolean syncSuccess = updateListInCloud(shoppingList.getListID(), serializedList);
-        ShoppingInterface.displaySynchronizationStatus(syncSuccess);
-        handleAccessList(scanner, shoppingList.getListID());
-    }
-
     private static ShoppingList getListFromServer(String listUUID) {
         try {
             // getting list from server
             System.out.println("\nAttempting to get list from cloud...");
+
+            // get the preference list
             List<String> preferenceList = ring.getPreferenceList(listUUID, 3);
+
             // print the preference list
             System.out.println("\nPreference List:");
             for (String server : preferenceList) {
                 System.out.println(server);
             }
+
+            // loop through the preference list and try to get the list from the cloud
             int serversDown = 0;
             for (String server : preferenceList) {
+
+                // create http client and request
                 HttpClient client = HttpClient.newHttpClient();
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create("http://" + server + "/read?uuid=" + listUUID + "&cord=true"))
@@ -309,13 +378,16 @@ public class Client {
                         .build();
 
                 try {
+                    // send the request
                     HttpResponse<byte[]> response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
+
+                    // check the response code
                     if (response.statusCode() == 200) {
                         return Serializer.deserialize(response.body());
-                    } else if (response.statusCode() == 404) {
+                    } else if (response.statusCode() == 404) { // list not found in server
                         System.out.println("\nList not found in " + server + "!");
-                        ShoppingList localList = db.getShoppingList(listUUID);
-                        if (localList != null) {
+                        ShoppingList localList = db.getShoppingList(listUUID); // get the list from local database
+                        if (localList != null) { // if the list exists in local database then synchronize it with the server
                             synchronizeListWithServer(listUUID, Serializer.serialize(localList));
                         }
                     } else {
