@@ -278,8 +278,23 @@ public class Client {
             }
         }
 
+        // get list from server
+        ShoppingList remoteList = getListFromServer(shoppingList.getListID());
+
+        if (remoteList == null) {
+            synchronizeListWithServer(shoppingList.getListID(), Serializer.serialize(shoppingList));
+        } else {
+            shoppingList = shoppingList.merge(remoteList.getListItems());
+        }
+
+        long counter = 1;
+        // check if the item exists in the list
+        if (shoppingList.getListItems().containsKey(itemName)) {
+            counter = shoppingList.getListItems().get(itemName).getTimestamp() + 1;
+        }
+
         // create CRDT for item
-        CRDT<String> crdtItem = new CRDT<>(Integer.toString(itemValue), System.currentTimeMillis(), clientUUID);
+        CRDT<String> crdtItem = new CRDT<>(Integer.toString(itemValue), counter, clientUUID);
         shoppingList.addItem(itemName, crdtItem);
 
         // try updating the list in the database
@@ -335,9 +350,16 @@ public class Client {
             }
         }
 
+        // get list from server
+        ShoppingList remoteList = getListFromServer(shoppingList.getListID());
 
-        // create CRDT object
-        CRDT<String> crdtItem = new CRDT<>(Integer.toString(itemValue), System.currentTimeMillis(), clientUUID);
+        if (remoteList == null) {
+            synchronizeListWithServer(shoppingList.getListID(), Serializer.serialize(shoppingList));
+        } else {
+            shoppingList = shoppingList.merge(remoteList.getListItems());
+        }
+
+        CRDT<String> crdtItem = new CRDT<>(Integer.toString(itemValue), shoppingList.getListItems().get(itemName).getTimestamp() + 1, clientUUID);
         shoppingList.updateItem(itemName, crdtItem);
 
         // try updating the list in the database
