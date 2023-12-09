@@ -6,15 +6,19 @@ import java.util.List;
 public class Cloud {
 
     public static void main(String[] args) {
-        // Define seeds for the ring
-        int numberOfSeeds; // Change this to the desired number of seeds
+
+        // Get the number of seeds from the command line arguments or use a default value
+        int numberOfSeeds;
         if (args.length > 0) {
             numberOfSeeds = Integer.parseInt(args[0]);
         } else {
             numberOfSeeds = 3;
         }
+
+        // Create a list of seeds
         List<String> seeds = new ArrayList<>();
 
+        // Add the seeds to the list
         for (int i = 0; i < numberOfSeeds; i++) {
             seeds.add("localhost:80" + (i < 10 ? "0" + i : i));
         }

@@ -54,7 +54,6 @@ public class ShoppingInterface {
 
     public static void displayListNotFound() {
         clearConsole();
-
         System.out.println("List not found!");
     }
 
@@ -87,14 +86,5 @@ public class ShoppingInterface {
             System.out.println("Item updated locally. Failed to synchronize with cloud.");
         }
     }
-
-    public static void displayItemRemovalSuccess(boolean syncSuccess) {
-        if (syncSuccess) {
-            System.out.println("Item removed successfully in cloud.");
-        } else {
-            System.out.println("Item removed locally. Failed to synchronize with cloud.");
-        }
-    }
-
 
 }

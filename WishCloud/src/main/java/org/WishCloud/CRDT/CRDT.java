@@ -10,8 +10,7 @@ public class CRDT<T> {
     // constructor
     public CRDT(@JsonProperty("value")T value,
                 @JsonProperty("timestamp")long timestamp,
-                @JsonProperty("clientID")String clientID)
-    {
+                @JsonProperty("clientID")String clientID) {
         this.value = value;
         this.timestamp = timestamp;
         this.clientID = clientID;
@@ -25,18 +24,13 @@ public class CRDT<T> {
         this.clientID = aux[2].split(":")[1].substring(1, aux[2].split(":")[1].length()-2);
     }
 
-    // create merge function
+    // merge function
     public CRDT<T> merge(CRDT<T> other) {
         if (other.timestamp > this.timestamp) {
             return other;
-//            this.value = other.value;
-//            this.timestamp = other.timestamp;
-//            this.clientID = other.clientID;
         } else if (other.timestamp == this.timestamp) {
             if (other.clientID.compareTo(this.clientID) > 0) {
                 return other;
-//                this.value = other.value;
-//                this.clientID = other.clientID;
             }
         }
         return this;

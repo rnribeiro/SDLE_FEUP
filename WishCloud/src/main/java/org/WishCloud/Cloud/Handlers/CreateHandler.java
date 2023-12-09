@@ -27,12 +27,12 @@ public class CreateHandler extends ServerHandler {
         Map<String,String> params = queryToMap(exchange.getRequestURI().getQuery());
         byte[] body = exchange.getRequestBody().readAllBytes();
 
+        // check if the request is valid
         if (!method.equals("POST") || !path.equals("/create")
                 || !params.containsKey("uuid") || !params.containsKey("cord")) {
             sendResponse(exchange, 400, "Invalid request!");
             return;
         }
-
 
         // check if the shopping list is null or already exists in database
         ShoppingList shoppingList;
@@ -48,7 +48,7 @@ public class CreateHandler extends ServerHandler {
             return;
         }
 
-        if (!params.get("cord").equals("true")) {
+        if (!params.get("cord").equals("true")) { // if the request is not a cord request
             sendResponse(exchange, 200, "Shopping list created!");
             return;
         }

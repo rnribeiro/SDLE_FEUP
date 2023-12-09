@@ -1,10 +1,7 @@
 package org.WishCloud.Cloud;
 
-import org.WishCloud.Cloud.Handlers.UpdateHandler;
+import org.WishCloud.Cloud.Handlers.*;
 import org.WishCloud.Database.SQl;
-import org.WishCloud.Cloud.Handlers.CreateHandler;
-import org.WishCloud.Cloud.Handlers.ReadHandler;
-import org.WishCloud.Cloud.Handlers.RefreshHandler;
 
 import com.sun.net.httpserver.HttpServer;
 import org.WishCloud.Utils.Ring;
