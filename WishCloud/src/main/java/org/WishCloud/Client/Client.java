@@ -322,53 +322,100 @@ public class Client {
         handleAccessList(scanner, shoppingList.getListID());
     }
 
-    private static ShoppingList getListFromServer(String listUUID) {
-        try {
-            // getting list from server
-            System.out.println("\nAttempting to get list from cloud...");
-            List<String> preferenceList = ring.getPreferenceList(listUUID, 3);
-            // print the preference list
-            System.out.println("\nPreference List:");
-            for (String server : preferenceList) {
-                System.out.println(server);
-            }
-            int serversDown = 0;
-            for (String server : preferenceList) {
+//    private static ShoppingList getListFromServer(String listUUID) {
+//        try {
+//            // getting list from server
+//            System.out.println("\nAttempting to get list from cloud...");
+//            List<String> preferenceList = ring.getPreferenceList(listUUID, 3);
+//            // print the preference list
+//            System.out.println("\nPreference List:");
+//            for (String server : preferenceList) {
+//                System.out.println(server);
+//            }
+//            int serversDown = 0;
+//            for (String server : preferenceList) {
+//                HttpClient client = HttpClient.newHttpClient();
+//                HttpRequest request = HttpRequest.newBuilder()
+//                        .uri(URI.create("http://" + server + "/read?uuid=" + listUUID + "&cord=true"))
+//                        .GET()
+//                        .build();
+//
+//                try {
+//                    HttpResponse<InputStream> response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
+//                    if (response.statusCode() == 200) {
+//                        // Read the InputStream into a byte array
+//                        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+//                        int nRead;
+//                        byte[] data = new byte[1024];
+//                        while ((nRead = response.body().read(data, 0, data.length)) != -1) {
+//                            buffer.write(data, 0, nRead);
+//                        }
+//
+//                        // Deserialize the byte array into a ShoppingList
+//                        byte[] serializedList = buffer.toByteArray();
+//                        return Serializer.deserialize(serializedList);
+//                    } else {
+//                        System.out.println(response.statusCode());
+//                        System.out.println("\nFailed to read from server " + server +"! Server Response: " + response.body());
+//                    }
+//                } catch (InterruptedException | ConnectException e) {
+//                    serversDown++;
+//                }
+//            }
+//            if (serversDown == 3) {
+//                System.out.println("\nAll servers are down. Please try again later.");
+//                return null;
+//            }
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//        return null;
+//    }
+
+    private static ShoppingList getListFromServer(String listID) {
+        List<String> preferenceList = ring.getPreferenceList(listID, 3);
+
+        // print the preference list
+        System.out.println("\nPreference List:");
+        for (String server : preferenceList) {
+            System.out.println(server);
+        }
+        // keep track of the number of servers that are down
+        int serversDown = 0;
+        // Iterate through the preference list and send read requests
+        for (String server : preferenceList) {
+            try {
+                // print getting list from server
+                System.out.println("\nAttempting to get list from server " + server + "...");
                 HttpClient client = HttpClient.newHttpClient();
                 HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create("http://" + server + "/read?uuid=" + listUUID + "&cord=true"))
+                        .uri(URI.create("http://" + server + "/read?uuid=" + listID + "&cord=true"))
                         .GET()
                         .build();
 
-                try {
-                    HttpResponse<InputStream> response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
-                    if (response.statusCode() == 200) {
-                        // Read the InputStream into a byte array
-                        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-                        int nRead;
-                        byte[] data = new byte[1024];
-                        while ((nRead = response.body().read(data, 0, data.length)) != -1) {
-                            buffer.write(data, 0, nRead);
-                        }
+                HttpResponse<byte[]> response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
 
-                        // Deserialize the byte array into a ShoppingList
-                        byte[] serializedList = buffer.toByteArray();
-                        return Serializer.deserialize(serializedList);
-                    } else {
-                        System.out.println(response.statusCode());
-                        System.out.println("\nFailed to read from server " + server +"! Server Response: " + response.body());
-                    }
-                } catch (InterruptedException | ConnectException e) {
+                // Check if the response is successful (HTTP status code 200)
+                if (response.statusCode() == 200) {
+                    // Deserialize the received byte array into a ShoppingList object
+                    return Serializer.deserialize(response.body());
+                } else {
+                    // Log an error if the request was not successful
+                    System.out.println("Error reading from remote server: " + response.statusCode());
+                    System.out.println("\nFailed to read from server " + server + "! Server Response: " + response.body());
                     serversDown++;
                 }
+
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-            if (serversDown == 3) {
-                System.out.println("\nAll servers are down. Please try again later.");
-                return null;
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
         }
+        if (serversDown == 3) {
+            System.out.println("\nAll servers are down. Please try again later.");
+            return null;
+        }
+
+        // Return null or handle appropriately if the list retrieval fails
         return null;
     }
 
