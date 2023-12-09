@@ -9,7 +9,7 @@ import java.util.Scanner;
 public class ShoppingInterface {
 
     public static void printMainMenu() {
-        System.out.println("Main Menu:");
+        System.out.println("\nMain Menu:");
         System.out.println("1- Create List");
         System.out.println("2- Access List");
         System.out.print("Enter your choice: ");
@@ -58,6 +58,7 @@ public class ShoppingInterface {
     }
 
     public static void displayShoppingList(ShoppingList shoppingList) {
+        System.out.println("List Name: " + shoppingList.getName());
         System.out.println("List Items:");
         System.out.println("------------------------------------------------------------");
         System.out.printf("%-20s | %-10s | %-10s | %-20s\n", "Item Name", "Value", "Counter", "Author");

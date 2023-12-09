@@ -228,6 +228,7 @@ public class Client {
                         handleUpdateItem(scanner, shoppingList);
                         break;
                     case 3:
+                        ShoppingInterface.clearConsole();
                         mainMenu(scanner);
                     default:
                         ShoppingInterface.displayInvalidChoice();
@@ -239,17 +240,36 @@ public class Client {
     }
 
     private static void handleAddItem(Scanner scanner, ShoppingList shoppingList) {
-        System.out.print("Enter Item Name: ");
-        String itemName = scanner.next();
-        System.out.print("Enter Item Value: ");
 
+        // prompt user for valid (new) item name until he enters a valid one or exits by pressing 0
+        String itemName;
+        while (true) {
+            System.out.print("Enter Item Name (0 to exit): ");
+            itemName = scanner.next();
+            if (itemName.equals("0")) {
+                handleAccessList(scanner, shoppingList.getListID());
+            }
+            if (!shoppingList.getListItems().containsKey(itemName)) {
+                break;
+            } else {
+                System.out.println("Item already exists. Please try again.");
+            }
+        }
+
+        // prompt user for valid item value until he enters a valid one or exits by entering -1
         int itemValue;
-        try {
-            itemValue = scanner.nextInt();
-        } catch (Exception e) {
-            ShoppingInterface.displayInvalidChoice();
-            scanner.next();
-            return;
+        while (true) {
+            System.out.print("Enter Item Value (-1 to exit): ");
+            try {
+                itemValue = scanner.nextInt();
+                if (itemValue == -1) {
+                    handleAccessList(scanner, shoppingList.getListID());
+                }
+                break;
+            } catch (Exception e) {
+                ShoppingInterface.displayInvalidChoice();
+                scanner.next();
+            }
         }
 
         // create CRDT for item
@@ -277,18 +297,38 @@ public class Client {
     }
 
     private static void handleUpdateItem(Scanner scanner, ShoppingList shoppingList) {
-        System.out.print("Enter Item Name: ");
-        String itemName = scanner.next();
-        System.out.print("Enter New Item Value: ");
 
-        int itemValue;
-        try {
-            itemValue = scanner.nextInt();
-        } catch (Exception e) {
-            ShoppingInterface.displayInvalidChoice();
-            scanner.next();
-            return;
+        // prompt user for valid (existing) item name until he enters a valid one or exits by pressing 0
+        String itemName;
+        while (true) {
+            System.out.print("Enter Item Name (0 to exit): ");
+            itemName = scanner.next();
+            if (itemName.equals("0")) {
+                handleAccessList(scanner, shoppingList.getListID());
+            }
+            if (shoppingList.getListItems().containsKey(itemName)) {
+                break;
+            } else {
+                System.out.println("Item not found. Please try again.");
+            }
         }
+
+        // prompt user for valid item value until he enters a valid one or exits by entering -1
+        int itemValue;
+        while (true) {
+            System.out.print("Enter Item Value (-1 to exit): ");
+            try {
+                itemValue = scanner.nextInt();
+                if (itemValue == -1) {
+                    handleAccessList(scanner, shoppingList.getListID());
+                }
+                break;
+            } catch (Exception e) {
+                ShoppingInterface.displayInvalidChoice();
+                scanner.next();
+            }
+        }
+
 
         // create CRDT object
         CRDT<String> crdtItem = new CRDT<>(Integer.toString(itemValue), System.currentTimeMillis(), clientUUID);
