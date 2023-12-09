@@ -210,6 +210,7 @@ public class Client {
                 System.out.println("1- Add Item");
                 System.out.println("2- Update Item");
                 System.out.println("3- Exit");
+                System.out.println("4- Refresh");
                 System.out.print("Enter your choice: ");
                 int choice;
                 try {
@@ -230,6 +231,11 @@ public class Client {
                     case 3:
                         ShoppingInterface.clearConsole();
                         mainMenu(scanner);
+                        break;
+                    case 4:
+                        ShoppingInterface.clearConsole();
+                        handleAccessList(scanner, listUUID);
+                        break;
                     default:
                         ShoppingInterface.displayInvalidChoice();
                 }
