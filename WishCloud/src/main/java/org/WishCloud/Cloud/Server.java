@@ -33,8 +33,14 @@ public class Server {
 
             // compute ring
             Ring ring = new Ring(HashSpace);
-            for (String seed : this.seeds) { ring.addNode(seed, 10); }
-            if (!this.seeds.contains(this.serverName)) { ring.addNode(this.serverName, 10); }
+            for (String seed : this.seeds) {
+                ring.addNode(seed, 10);
+            }
+
+
+            if (!this.seeds.contains(this.serverName)) {
+                ring.addNode(this.serverName, 10);
+            }
 
             // thread pool
             ThreadPoolExecutor threadPoolExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(10);
@@ -67,11 +73,11 @@ public class Server {
     }
 
     public static void main(String[] args) {
-        // create server
-        Server server = new Server("localhost", 8000, List.of("localhost:8000", "localhost:8001"));
-
-        // start server
-        server.start();
+//        // create server
+//        Server server = new Server("localhost", 8000, List.of("localhost:8000", "localhost:8001"));
+//
+//        // start server
+//        server.start();
     }
 }
 
