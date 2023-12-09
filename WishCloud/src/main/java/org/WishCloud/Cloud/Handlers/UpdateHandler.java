@@ -41,23 +41,6 @@ public class UpdateHandler extends ServerHandler {
         ShoppingList clientSl = Serializer.deserialize(body);
         if (localSL == null) {
             sendResponse(exchange, 400, "Shopping list doesn't exist!");
-//            // build create request
-//            HttpClient client = HttpClient.newHttpClient();
-//            HttpRequest request = HttpRequest.newBuilder()
-//                    .uri(URI.create("http://" + getServerName() + "/create?uuid=" + params.get("uuid") + "&cord=false"))
-//                    .POST(HttpRequest.BodyPublishers.ofByteArray(body))
-//                    .build();
-//
-//            try {
-//                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-//                if (response.statusCode() == 200) {
-//                    System.out.println("\nReplica in " + getServerName() + " created! Server Response: " + response.body());
-//                }
-//            } catch (InterruptedException e) {
-//                System.out.println(e.getMessage());
-//            } finally {
-//                sendResponse(exchange, 200, "Shopping list created!");
-//            }
             return;
         } else if (clientSl == null) {
             sendResponse(exchange, 400, "Shopping list corrupted!");

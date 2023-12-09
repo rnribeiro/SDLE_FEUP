@@ -55,6 +55,19 @@ public abstract class ServerHandler implements HttpHandler {
         }
     }
 
+    protected static void sendResponse(HttpExchange exchange, int statusCode, byte[] response) {
+        try {
+            exchange.getResponseHeaders().set("Content-Type", "text/plain");
+            exchange.sendResponseHeaders(statusCode, 0);
+
+            OutputStream os = exchange.getResponseBody();
+            os.write(response);
+            os.close();
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
     protected int writer(byte[] content, String method, String uuid) {
         List<String> orderedNodes = getRing().getPreferenceList(uuid);
         List<String> preferenceList = getRing().getPreferenceList(uuid, this.replicas);

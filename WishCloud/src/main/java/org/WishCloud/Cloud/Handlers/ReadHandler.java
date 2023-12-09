@@ -39,15 +39,15 @@ public class ReadHandler extends ServerHandler {
         // check if the shopping list is null or already exists in database
         ShoppingList shoppingList = getDb().getShoppingList(params.get("uuid"));
         if (shoppingList == null) {
-            sendResponse(exchange, 400, "Shopping list doesn't exist!");
+            sendResponse(exchange, 404, "Shopping list doesn't exist!");
             return;
         }
 
         if (!params.get("cord").equals("true")) {
-            sendResponse(exchange, 200, Arrays.toString(Serializer.serialize(shoppingList)));
+            sendResponse(exchange, 200, Serializer.serialize(shoppingList));
             return;
         }
-        ShoppingList mergedSL = null;
+//        ShoppingList mergedSL = null;
         int replicasRemaining = this.replicas - 1;
         List<String> orderedList = getRing().getPreferenceList(params.get("uuid"));
         for (String server : orderedList.subList(orderedList.indexOf(getServerName()) + 1, orderedList.size())) {
@@ -61,11 +61,11 @@ public class ReadHandler extends ServerHandler {
                     .build();
 
             try {
-                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+                HttpResponse<byte[]> response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
                 if (response.statusCode() == 200) {
                     System.out.println("\nReplica of list " + params.get("uuid") + " read from " +  server + "! Server Response: " + response.body());
-                    ShoppingList newSL = Serializer.deserialize(response.body().getBytes());
-                    mergedSL = shoppingList.merge(newSL.getListItems());
+                    ShoppingList newSL = Serializer.deserialize(response.body());
+                    shoppingList = shoppingList.merge(newSL.getListItems());
                     replicasRemaining--;
                 } else {
                     System.out.println("\nError reading replica of list " + params.get("uuid") + " from " +  server + "! Server Response: " + response.body());
@@ -76,14 +76,10 @@ public class ReadHandler extends ServerHandler {
             }
         }
 
-        if (replicasRemaining != 0) {
-            sendResponse(exchange, 500, "Error loading shopping list on database!");
+        if (replicasRemaining != 0 || shoppingList == null) {
+            sendResponse(exchange, 500, "Error retrieving shopping list!");
             return;
         }
-        if (mergedSL == null) {
-            sendResponse(exchange, 500, "Error loading shopping list on database!");
-            return;
-        }
-        sendResponse(exchange, 200, Arrays.toString(Serializer.serialize(mergedSL)));
+        sendResponse(exchange, 200, Serializer.serialize(shoppingList));
     }
 }

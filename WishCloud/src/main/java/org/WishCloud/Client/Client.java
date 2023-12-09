@@ -55,8 +55,7 @@ public class Client {
         System.out.println("Client UUID: " + clientUUID);
 
         db = new SQl(clientUUID); // Create a database instance specific to this client
-        db.createDB(); // Create the database
-        db.connect(); // Connect to the database
+        db.createDB();
         Scanner scanner = new Scanner(System.in);
 
         mainMenu(scanner);
@@ -72,7 +71,6 @@ public class Client {
         while (true) {
             ShoppingInterface.printMainMenu();
 
-            // try to read user input as an integer
             int choice;
             try {
                 choice = scanner.nextInt();
@@ -100,9 +98,7 @@ public class Client {
         String listUUID = UUID.randomUUID().toString();
 
         ShoppingList shoppingList = new ShoppingList(listName, listUUID, new HashMap<>());
-        db.connect();
         ShoppingInterface.displayCreationSuccess(listUUID, db.insertSL(shoppingList));
-//        db.close();
         byte[] serializedList = Serializer.serialize(shoppingList);
         boolean syncSuccess = synchronizeListWithServer(listUUID, serializedList);
 
@@ -151,23 +147,23 @@ public class Client {
 
     private static ShoppingList getListFromServerOrLocal(String listUUID) {
         ShoppingList shoppingList = getListFromServer(listUUID);
-        ShoppingList list = null;
+        ShoppingList list;
         if (shoppingList == null) {
             // print getting list from local
             System.out.println("\nAttempting to get list from local database...");
-            db.connect();
             list = db.getShoppingList(listUUID);
-//            db.close();
         } else {
             // merge the local list with the server list
-            db.connect();
             System.out.println("\nAttempting to get list from local database...");
             ShoppingList localList = db.getShoppingList(listUUID);
-//            db.close();
             if (localList != null) {
                 // print merging lists
                 System.out.println("\nMerging lists...");
                 list = shoppingList.merge(localList.getListItems());
+                db.updateShoppingList(list);
+            } else {
+                db.insertSL(shoppingList);
+                list = shoppingList;
             }
         }
 
@@ -186,9 +182,8 @@ public class Client {
             while (true) {
                 System.out.println("List Actions:");
                 System.out.println("1- Add Item");
-                System.out.println("2- Remove Item");
-                System.out.println("3- Update Item");
-                System.out.println("4- Exit");
+                System.out.println("2- Update Item");
+                System.out.println("3- Exit");
                 System.out.print("Enter your choice: ");
                 int choice;
                 try {
@@ -204,12 +199,9 @@ public class Client {
                         handleAddItem(scanner, shoppingList);
                         break;
                     case 2:
-                        handleRemoveItem(scanner, shoppingList);
-                        break;
-                    case 3:
                         handleUpdateItem(scanner, shoppingList);
                         break;
-                    case 4:
+                    case 3:
                         mainMenu(scanner);
                     default:
                         ShoppingInterface.displayInvalidChoice();
@@ -231,36 +223,15 @@ public class Client {
         shoppingList.updateItem(itemName, crdtItem);
 
         // try updating the list in the database
-        db.connect();
+
         if (!db.updateShoppingList(shoppingList)) {
             System.out.println("Item locally updated successfully.");
         } else {
             System.out.println("Failed to update item.");
         }
-//        db.close();
         byte[] serializedList = Serializer.serialize(shoppingList);
         boolean syncSuccess = updateListInCloud(shoppingList.getListID(), serializedList);
         ShoppingInterface.displayItemUpdateSuccess(syncSuccess);
-        handleAccessList(scanner, shoppingList.getListID());
-    }
-
-    private static void handleRemoveItem(Scanner scanner, ShoppingList shoppingList) {
-        System.out.print("Enter Item Name: ");
-        String itemName = scanner.next();
-        shoppingList.removeItem(itemName);
-
-        // try updating the list in the database
-        db.connect();
-        if (!db.updateShoppingList(shoppingList)) {
-            System.out.println("Item locally removed successfully.");
-        } else {
-            System.out.println("Failed to remove item.");
-        }
-//        db.close();
-
-        byte[] serializedList = Serializer.serialize(shoppingList);
-        boolean syncSuccess = updateListInCloud(shoppingList.getListID(), serializedList);
-        ShoppingInterface.displayItemRemovalSuccess(syncSuccess);
         handleAccessList(scanner, shoppingList.getListID());
     }
 
@@ -307,14 +278,11 @@ public class Client {
         shoppingList.addItem(itemName, crdtItem);
 
         // try updating the list in the database
-        db.connect();
         if (!db.updateShoppingList(shoppingList)) {
             System.out.println("Item locally added successfully.");
         } else {
             System.out.println("Failed to add item.");
         }
-//        db.close();
-
 
         byte[] serializedList = Serializer.serialize(shoppingList);
         boolean syncSuccess = updateListInCloud(shoppingList.getListID(), serializedList);
@@ -341,22 +309,19 @@ public class Client {
                         .build();
 
                 try {
-                    HttpResponse<InputStream> response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
+                    HttpResponse<byte[]> response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
                     if (response.statusCode() == 200) {
-                        // Read the InputStream into a byte array
-                        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-                        int nRead;
-                        byte[] data = new byte[1024];
-                        while ((nRead = response.body().read(data, 0, data.length)) != -1) {
-                            buffer.write(data, 0, nRead);
+                        return Serializer.deserialize(response.body());
+                    } else if (response.statusCode() == 404) {
+                        System.out.println("\nList not found in " + server + "!");
+                        ShoppingList localList = db.getShoppingList(listUUID);
+                        if (localList != null) {
+                            synchronizeListWithServer(listUUID, Serializer.serialize(localList));
                         }
-
-                        // Deserialize the byte array into a ShoppingList
-                        byte[] serializedList = buffer.toByteArray();
-                        return Serializer.deserialize(serializedList);
                     } else {
                         System.out.println(response.statusCode());
-                        System.out.println("\nFailed to read from server " + server +"! Server Response: " + response.body());
+                        System.out.println("\nFailed to read from server " + server + "! Server Response: " + Arrays.toString(response.body()));
+
                     }
                 } catch (InterruptedException | ConnectException e) {
                     serversDown++;
