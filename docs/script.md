@@ -1,30 +1,32 @@
-- Before turning cloud on:
+## Before turning cloud on:
 
-- Local first list creation and add items to it
+### <input type="checkbox" checked> Local first list creation and add items to it
 
-- Turn on cloud and synchronize list with cloud (access list from client)
+### <input type="checkbox" checked> Turn on cloud and synchronize list with cloud (access list from client)
 
-- Show database tables of cloud to show sync (replicas)
+### <input type="checkbox" checked> Show database tables of cloud to show sync (replicas)
 
-- Access list from second client
+### <input type="checkbox" checked> Access list from second client
 
-- Update list in both clients with cloud up and refresh to see "live" updates"
+### <input type="checkbox" checked> Update list in both clients with cloud up and refresh to see "live" updates"
 
-- Shut cloud down
+### <input type="checkbox" checked> Shut cloud down
 
-- Increase update item multiple times in one client
+### <input type="checkbox" checked> Increase update item multiple times in one client
 
-- Add item to list in the other client
+### <input type="checkbox" checked> Add item to list in the other client
 
-- Turn on cloud
+## After turning on cloud:
 
-- Refresh list to synchronize local lists with cloud
+### <input type="checkbox" checked> Turn on cloud
 
-- Show database tables
+### <input type="checkbox" checked> Refresh list to synchronize local lists with cloud
 
-- Deactivate coordinator and check effects. Reactivate coordinator
+### <input type="checkbox" checked> Show database tables
 
-- Deactivate second server in preference list and check effects. Reactivate server
+### <input type="checkbox" checked> Deactivate coordinator and check effects. Reactivate coordinator
+
+### <input type="checkbox" checked> Deactivate second server in preference list and check effects. Reactivate server
 
 
 
