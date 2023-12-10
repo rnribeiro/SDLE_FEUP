@@ -22,6 +22,7 @@ public class Client {
     private static Ring ring;
     private static List<String> seeds;
     private static final int HashSpace = 1 << 31;
+    private static Timer timer;
 
     public static void main(String[] args) {
 
@@ -193,8 +194,7 @@ public class Client {
         private int choice;
 
         public ScannerThread(Scanner scanner) {
-            // Create a new Scanner instance for each thread
-            this.scanner = new Scanner(System.in);
+            this.scanner = scanner;
         }
 
         public int getChoice() {
@@ -204,7 +204,6 @@ public class Client {
         @Override
         public void run() {
             try {
-                // Wrap the nextInt() call in a try-catch block
                 choice = scanner.nextInt();
             } catch (Exception e) {
                 choice = -1; // Set a special value to indicate an error
@@ -229,18 +228,9 @@ public class Client {
 
             displayAndRefreshListPeriodically(scanner, shoppingList);
 
-            // Create a thread to handle user input
-            ScannerThread scannerThread = new ScannerThread(scanner);
-            scannerThread.start();
-
-            // Prompt user for list actions
             while (true) {
-                System.out.println("\nList Actions:");
-                System.out.println("1- Add Item");
-                System.out.println("2- Update Item");
-                System.out.println("3- Exit");
-                System.out.print("Enter your choice: ");
-
+                ScannerThread scannerThread = new ScannerThread(scanner);
+                scannerThread.start(); // Start a new thread for the next input
                 // Wait for the user input thread to finish
                 try {
                     scannerThread.join();
@@ -249,8 +239,6 @@ public class Client {
                 }
 
                 int choice = scannerThread.getChoice();
-                scannerThread = new ScannerThread(scanner);
-                scannerThread.start(); // Start a new thread for the next input
 
                 switch (choice) {
                     case 1:
@@ -281,21 +269,21 @@ public class Client {
         }
     }
 
-    private static Timer timer;
+
 
     private static void displayAndRefreshListPeriodically(Scanner scanner, ShoppingList shoppingList) {
-
         // Schedule a task to refresh and display the list every 5 seconds
         timer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
+                // refresh the list
                 ShoppingInterface.clearConsole();
-                ShoppingInterface.displayShoppingList(shoppingList);
-//                System.out.println("\nList Actions:");
-//                System.out.println("1- Add Item");
-//                System.out.println("2- Update Item");
-//                System.out.println("3- Exit");
-//                System.out.print("Enter your choice: ");
+                ShoppingInterface.displayShoppingList(getListFromServerOrLocal(shoppingList.getListID()));
+                System.out.println("\nList Actions:");
+                System.out.println("1- Add Item");
+                System.out.println("2- Update Item");
+                System.out.println("3- Exit");
+                System.out.print("Enter your choice: ");
             }
         }, 0, 5000); // Run the task every 5 seconds
     }
@@ -317,7 +305,6 @@ public class Client {
             }
 
         }
-        scanner.next();
         // prompt user for valid item value until he enters a valid one or exits by entering -1
         int itemValue;
         while (true) {
@@ -327,7 +314,6 @@ public class Client {
                 if (itemValue == -1) {
                     handleAccessList(scanner, shoppingList.getListID());
                 }
-                scanner.next();
                 break;
             } catch (Exception e) {
                 ShoppingInterface.displayInvalidChoice();
