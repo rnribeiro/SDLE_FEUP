@@ -1,23 +1,23 @@
 package org.WishCloud.Database;
 
+import org.WishCloud.CRDT.CRDT;
+import org.WishCloud.CRDT.ShoppingList;
+import org.WishCloud.Utils.Pair;
+
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.*;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
-import org.WishCloud.CRDT.CRDT;
-import org.WishCloud.CRDT.ShoppingList;
-import org.sqlite.SQLiteConfig;
-
-public class SQl {
-    private Connection conn = null;
-    private final String dbName;
-    private static final String sql_lists = """
+public class Backup extends SQlite {
+    private static final String sql_lists_hinted = """
             CREATE TABLE IF NOT EXISTS lists (
                 name text NOT NULL,
-            	uuid text NOT NULL PRIMARY KEY
+            	uuid text NOT NULL PRIMARY KEY,
+            	server text NOT NULL
             );""";
+
     private static final String sql_items = """
             CREATE TABLE IF NOT EXISTS items (
             	name text NOT NULL,
@@ -28,11 +28,11 @@ public class SQl {
             	FOREIGN KEY (list_uuid) REFERENCES lists (uuid)
             );""";
 
-
-    public SQl(String name) {
-        this.dbName = "db_" + name + ".db";
+    public Backup(String dbName) {
+        super(dbName);
     }
 
+    @Override
     public void createDB() {
         String path = System.getProperty("user.dir");
         Path fullPath = Paths.get(path, "DBs", this.dbName);
@@ -47,12 +47,11 @@ public class SQl {
             if (this.conn != null) {
                 DatabaseMetaData meta = conn.getMetaData();
                 // System.out.println("The driver name is " + meta.getDriverName());
-                System.out.println("Connected to database.");
+                System.out.println("Created Backup database.");
 
                 Statement stmt = conn.createStatement();
-                stmt.execute(sql_lists);
                 stmt.execute(sql_items);
-//                stmt.execute(sql_hinted_nodes);
+                stmt.execute(sql_lists_hinted);
             }
         } catch (SQLException e) {
             System.out.println(e.getMessage());
@@ -61,66 +60,7 @@ public class SQl {
         }
     }
 
-    private void connect() {
-        String path = System.getProperty("user.dir");
-        Path fullPath = Paths.get(path, "DBs", this.dbName);
-        String url = "jdbc:sqlite:" + fullPath;
-
-        try {
-            this.conn = DriverManager.getConnection(url);
-            SQLiteConfig config = new SQLiteConfig();
-            config.setJournalMode(SQLiteConfig.JournalMode.WAL);
-            config.apply(this.conn);
-            System.out.println("Connected to database.");
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
-    }
-
-    private void close() {
-        try {
-            if (this.conn != null) {
-                if (!this.conn.getAutoCommit()) { this.conn.rollback(); }
-                this.conn.close();
-            }
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
-    }
-
-    private void beginTransaction() {
-        try {
-            if (this.conn != null) {
-                this.conn.setAutoCommit(false);
-            }
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
-    }
-
-    private void commitTransaction() {
-        try {
-            if (this.conn != null) {
-                this.conn.commit();
-                this.conn.setAutoCommit(true);
-            }
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
-    }
-
-    private void rollbackTransaction() {
-        try {
-            if (this.conn != null) {
-                if (!this.conn.getAutoCommit()) { this.conn.rollback(); }
-                this.conn.setAutoCommit(true);
-            }
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
-    }
-
-    private boolean insertShoppingList(ShoppingList list) {
+    private boolean insertShoppingList(ShoppingList list, String hinted) {
         String uuid = list.getListID();
         String name = list.getName();
         Map<String, CRDT<String>> items = list.getListItems();
@@ -130,10 +70,11 @@ public class SQl {
         beginTransaction();
         try {
             // insert list
-            String sql = "INSERT INTO lists (name, uuid) VALUES (?, ?)";
+            String sql = "INSERT INTO lists (name, uuid, server) VALUES (?, ?, ?)";
             PreparedStatement pstmt = this.conn.prepareStatement(sql);
             pstmt.setString(1, name);
             pstmt.setString(2, uuid);
+            pstmt.setString(3, hinted);
             pstmt.executeUpdate();
 
             // insert items
@@ -165,7 +106,7 @@ public class SQl {
         return error;
     }
 
-    private boolean updateShoppingList(ShoppingList updatedList) {
+    private boolean updateShoppingList(ShoppingList updatedList, String hinted) {
         connect();
         beginTransaction();
         boolean error = false;
@@ -176,10 +117,11 @@ public class SQl {
             Map<String, CRDT<String>> items = updatedList.getListItems();
 
             // Update the list name in the 'lists' table
-            String updateListSql = "UPDATE lists SET name = ? WHERE uuid = ?";
+            String updateListSql = "UPDATE lists SET name = ?, server = ? WHERE uuid = ?";
             PreparedStatement updateListPstmt = this.conn.prepareStatement(updateListSql);
             updateListPstmt.setString(1, name);
-            updateListPstmt.setString(2, uuid);
+            updateListPstmt.setString(2, hinted);
+            updateListPstmt.setString(3, uuid);
             updateListPstmt.executeUpdate();
 
             // Clear existing items for the list in the 'items' table
@@ -235,12 +177,6 @@ public class SQl {
             deleteItemsPstmt.setString(1, listUUID);
             deleteItemsPstmt.executeUpdate();
 
-            // delete the list from the 'hinted_nodes' table
-            String deleteHintedNodeSql = "DELETE FROM hinted_nodes WHERE list_uuid = ?";
-            PreparedStatement deleteHintedNodePstmt = this.conn.prepareStatement(deleteHintedNodeSql);
-            deleteHintedNodePstmt.setString(1, listUUID);
-            deleteHintedNodePstmt.executeUpdate();
-
             commitTransaction();
         } catch (SQLException e) {
             System.out.println(e.getMessage());
@@ -253,16 +189,16 @@ public class SQl {
         return error;
     }
 
-    public synchronized boolean write(ShoppingList list, String method) {
+    public synchronized boolean write(ShoppingList list, String method, String hinted) {
         return switch (method) {
-            case "insert" -> insertShoppingList(list);
-            case "update" -> updateShoppingList(list);
+            case "insert" -> insertShoppingList(list, hinted);
+            case "update" -> updateShoppingList(list, hinted);
             case "delete" -> deleteShoppingList(list.getListID());
             default -> true;
         };
     }
 
-    public ShoppingList read(String listUUID) {
+    public ShoppingList read(String listUUID, AtomicReference<String> ref) {
         ShoppingList shoppingList = null;
 
         connect();
@@ -275,6 +211,8 @@ public class SQl {
 
             if (listRs.next()) {
                 String name = listRs.getString("name");
+                String server = listRs.getString("server");
+                ref.set(server);
 
                 // Query to get items of the shopping list
                 String itemsSql = "SELECT * FROM items WHERE list_uuid = ?";
@@ -302,5 +240,51 @@ public class SQl {
         }
 
         return shoppingList;
+    }
+
+    public List<Pair<ShoppingList,String>> readAll() {
+        List<Pair<ShoppingList,String>> shoppingLists = new ArrayList<>();
+
+        connect();
+        try {
+            // Query to get all shopping lists
+            String listSql = "SELECT * FROM lists";
+            PreparedStatement listPstmt = this.conn.prepareStatement(listSql);
+            ResultSet listRs = listPstmt.executeQuery();
+            String server = null;
+
+            while (listRs.next()) {
+                String listUUID = listRs.getString("uuid");
+                String name = listRs.getString("name");
+                server = listRs.getString("server");
+
+                // Query to get items of the shopping list
+                String itemsSql = "SELECT * FROM items WHERE list_uuid = ?";
+                PreparedStatement itemsPstmt = this.conn.prepareStatement(itemsSql);
+                itemsPstmt.setString(1, listUUID);
+                ResultSet itemsRs = itemsPstmt.executeQuery();
+
+                Map<String, CRDT<String>> items = new HashMap<>();
+                while (itemsRs.next()) {
+                    String itemName = itemsRs.getString("name");
+                    String value = String.valueOf(itemsRs.getInt("value"));
+                    long counter = itemsRs.getLong("counter");
+                    String author = itemsRs.getString("author");
+
+                    CRDT<String> crdtItem = new CRDT<>(value, counter, author);
+                    items.put(itemName, crdtItem);
+                }
+
+                ShoppingList shoppingList = new ShoppingList(name, listUUID, items);
+                Pair<ShoppingList, String> pair = new Pair<>(shoppingList, server);
+                shoppingLists.add(pair);
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        } finally {
+            close();
+        }
+
+        return shoppingLists;
     }
 }

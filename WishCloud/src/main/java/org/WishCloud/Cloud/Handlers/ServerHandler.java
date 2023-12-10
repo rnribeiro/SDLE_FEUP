@@ -3,7 +3,8 @@ package org.WishCloud.Cloud.Handlers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
-import org.WishCloud.Database.SQl;
+import org.WishCloud.Database.Backup;
+import org.WishCloud.Database.Storage;
 import org.WishCloud.CRDT.ShoppingList;
 import org.WishCloud.Utils.Ring;
 import org.WishCloud.Utils.Serializer;
@@ -15,18 +16,23 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.*;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.net.http.HttpTimeoutException;
+
 
 public abstract class ServerHandler implements HttpHandler {
     protected final int replicas = 3;
     protected final String serverName;
     protected final Ring ring;
-    protected final SQl db;
+    protected final Storage db;
+    protected final Backup db_backup;
 
-    public ServerHandler(String serverName, Ring ring, SQl db) {
+    public ServerHandler(String serverName, Ring ring, Storage db, Backup db_backup) {
         this.serverName = serverName;
         this.ring = ring;
         this.db = db;
+        this.db_backup = db_backup;
     }
 
     protected static Map<String, String> queryToMap(String query){
@@ -69,7 +75,7 @@ public abstract class ServerHandler implements HttpHandler {
         }
     }
 
-    protected List<String> put(byte[] content, String method, String uuid) {
+    protected List<String> put(byte[] content, String uuid) {
         List<String> orderedNodes = getRing().getPreferenceList(uuid);
         List<String> preferenceList = getRing().getPreferenceList(uuid, this.replicas);
         Set<String> servedNodes = new HashSet<>();
@@ -80,7 +86,7 @@ public abstract class ServerHandler implements HttpHandler {
             if (servedNodes.size() == this.replicas) { break; }
 
             String hintedNode = null;
-            StringBuilder url = new StringBuilder("http://" + server + "/" + method + "?uuid=" + uuid + "&cord=false");
+            StringBuilder url = new StringBuilder("http://" + server + "/upload" + "?uuid=" + uuid + "&cord=false");
             if (!preferenceList.contains(server)) {
                 // find server in the preference list that was not served yet
                 hintedNode = preferenceList.stream()
@@ -93,6 +99,7 @@ public abstract class ServerHandler implements HttpHandler {
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url.toString()))
+                    .timeout(java.time.Duration.ofMillis(400))
                     .POST(HttpRequest.BodyPublishers.ofByteArray(content))
                     .build();
 
@@ -103,7 +110,9 @@ public abstract class ServerHandler implements HttpHandler {
                     servedNodes.add(server);
                     if (hintedNode != null) { hintedNodes.add(hintedNode); }
                 }
-            } catch (InterruptedException | IOException e) {
+            }
+
+            catch (InterruptedException | IOException e) {
                 System.out.println(e.getMessage());
             }
         }
@@ -122,13 +131,14 @@ public abstract class ServerHandler implements HttpHandler {
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("http://" + server + "/read?uuid=" + uuid + "&cord=false"))
+                    .timeout(java.time.Duration.ofMillis(400))
                     .GET()
                     .build();
 
             try {
                 HttpResponse<byte[]> response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
                 if (response.statusCode() == 200) {
-                    System.out.println("\nReplica in " + server + " created! Server Response: " + Arrays.toString(response.body()));
+                    System.out.println("\nReplica in " + server + " read! Server Response: " + Arrays.toString(response.body()));
                     ShoppingList newSL = Serializer.deserialize(response.body());
                     shoppingList = shoppingList.merge(newSL.getListItems());
                     replicasRemaining--;
@@ -142,28 +152,12 @@ public abstract class ServerHandler implements HttpHandler {
         return replicasRemaining;
     }
 
-    protected void undoCreate(List<String> servedNodes) {
-        for (String server : servedNodes) {
-            // send the shopping list to the next server in the ring
-            HttpClient client = HttpClient.newHttpClient();
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("http://" + server + "/delete?uuid=" + server + "&cord=false"))
-                    .DELETE()
-                    .build();
-
-            try {
-                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-                if (response.statusCode() == 200 || response.statusCode() == 404) {
-                    System.out.println("\nReplica in " + server + " deleted! Server Response: " + response.body());
-                }
-            } catch (InterruptedException | IOException e) {
-                System.out.println(e.getMessage());
-            }
-        }
+    public Storage getDb() {
+        return db;
     }
 
-    public SQl getDb() {
-        return db;
+    public Backup getDb_backup() {
+        return db_backup;
     }
 
     public Ring getRing() { return ring; }

@@ -1,7 +1,8 @@
 package org.WishCloud.Cloud;
 
 import org.WishCloud.Cloud.Handlers.*;
-import org.WishCloud.Database.SQl;
+import org.WishCloud.Database.Backup;
+import org.WishCloud.Database.Storage;
 
 import com.sun.net.httpserver.HttpServer;
 import org.WishCloud.Utils.Ring;
@@ -28,8 +29,10 @@ public class Server {
     public void start() {
         try {
             // create database
-            SQl db = new SQl(this.serverIp + "_" + this.serverPort);
+            Storage db = new Storage(this.serverIp + "_" + this.serverPort);
             db.createDB();
+            Backup db_backup = new Backup(this.serverIp + "_" + this.serverPort + "_hinted");
+            db_backup.createDB();
 
             // compute ring
             Ring ring = new Ring(HashSpace);
@@ -49,24 +52,25 @@ public class Server {
             HttpServer server = HttpServer.create(new InetSocketAddress(this.serverIp, this.serverPort), 0);
 
             // create contexts
-            server.createContext("/create", new CreateHandler(this.serverName, ring, db));
-            server.createContext("/read", new ReadHandler(this.serverName, ring, db));
-            server.createContext("/update", new UpdateHandler(this.serverName, ring, db));
-            server.createContext("/delete", new DeleteHandler(this.serverName, ring, db));
-            server.createContext("/refresh", new RefreshHandler());
+            server.createContext("/upload", new UploadHandler(this.serverName, ring, db, db_backup));
+            server.createContext("/read", new ReadHandler(this.serverName, ring, db, db_backup));
 
             // set executor
             server.setExecutor(threadPoolExecutor);
 
             // Start the server
             server.start();
+            HintedSender hintedSender = new HintedSender(this.serverName, db_backup);
             System.out.println("Server started on http://" + this.serverName);
+
+            // add thread to periodically send hinted data
 
             // Add a shutdown hook to stop the server
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                System.out.println("Shutting down");
+                hintedSender.stopThread();
+                System.out.println(this.serverName + " shutting down");
                 server.stop(5); // Stop the server with a delay of 5 seconds
-                System.out.println("Server stopped");
+                System.out.println(this.serverName + " stopped");
             }));
         } catch (Exception e) {
             e.printStackTrace();
