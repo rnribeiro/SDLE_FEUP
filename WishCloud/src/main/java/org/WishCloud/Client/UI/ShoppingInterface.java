@@ -19,7 +19,7 @@ public class ShoppingInterface {
     public static String promptForListName(Scanner scanner) {
         clearConsole();
         System.out.print("Enter List Name: ");
-        return scanner.nextLine();
+        return scanner.next();
     }
 
     public static void clearConsole() {

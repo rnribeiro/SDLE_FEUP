@@ -167,6 +167,7 @@ public class Client {
             // print getting list from local
             System.out.println("\nAttempting to get list from local database...");
             list = db.getShoppingList(listUUID);
+            synchronizeListWithServer(listUUID, Serializer.serialize(list));
         } else {
             // merge the local list with the server list
             System.out.println("\nAttempting to get list from local database...");
@@ -176,6 +177,7 @@ public class Client {
                 System.out.println("\nMerging lists...");
                 list = shoppingList.merge(localList.getListItems());
                 db.updateShoppingList(list);
+                updateListInCloud(listUUID, Serializer.serialize(list));
             } else {
                 db.insertSL(shoppingList);
                 list = shoppingList;
@@ -250,21 +252,20 @@ public class Client {
                         handleUpdateItem(new Scanner(System.in), shoppingList);
                         break;
                     case 3:
-                        timer.cancel(); // Stop the timer when the user exits
-                        // stop scanner thread
+                        timer.cancel();
                         scannerThread.interrupt();
                         ShoppingInterface.clearConsole();
                         mainMenu(scanner);
                         break;
                     default:
                         ShoppingInterface.displayInvalidChoice();
+                        break;
                 }
             }
         } else {
             ShoppingInterface.displayListNotFound();
         }
     }
-
 
 
     private static void displayAndRefreshListPeriodically(Scanner scanner, ShoppingList shoppingList) {
