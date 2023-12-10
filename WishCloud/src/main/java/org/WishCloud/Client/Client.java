@@ -1,5 +1,6 @@
 package org.WishCloud.Client;
 
+import java.io.Console;
 import java.io.IOException;
 import java.net.*;
 import java.net.http.HttpClient;
@@ -122,7 +123,8 @@ public class Client {
         // get the preference list
         List<String> preferenceList = ring.getPreferenceList(listUUID, 3);
 
-        ShoppingInterface.printShoppingList(preferenceList);
+        // print the preference list
+        ShoppingInterface.printPreferenceList(preferenceList);
 
         // loop through the preference list and try to create the list in the cloud
         for (String server : preferenceList) {
@@ -141,10 +143,10 @@ public class Client {
 
                 // check the response code
                 if (response.statusCode() == 200) {
-                    System.out.println("\nReplica in " + server + " created! Server Response: " + response.body());
+                    System.out.println("\nReplica of list " + listUUID + " created in " + server + "!\nServer Response: " + response.body());
                     return true;
                 } else {
-                    System.out.println("\nReplica in " + server + " failed! Server Response: " + response.body());
+                    System.out.println("\nReplica of list " + listUUID + " failed in " + server + "!\nServer Response: " + response.body());
                 }
 
             } catch (InterruptedException | IOException e) {
@@ -161,15 +163,18 @@ public class Client {
         if (shoppingList == null) {
             // print getting list from local
             System.out.println("\nAttempting to get list from local database...");
+            pauseConsole(500);
             list = db.read(listUUID);
             synchronizeListWithServer(listUUID, Serializer.serialize(list));
         } else {
             // merge the local list with the server list
             System.out.println("\nAttempting to get list from local database...");
+            pauseConsole(500);
             ShoppingList localList = db.read(listUUID);
             if (localList != null) {
                 // print merging lists
                 System.out.println("\nMerging lists...");
+                pauseConsole(500);
                 list = shoppingList.merge(localList.getListItems());
                 db.write(list, "update");
                 updateListInCloud(listUUID, Serializer.serialize(list));
@@ -181,6 +186,14 @@ public class Client {
         }
 
         return list;
+    }
+
+    private static void pauseConsole(int time) {
+        try {
+            Thread.sleep(time);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     private static class ScannerThread extends Thread {
@@ -225,32 +238,19 @@ public class Client {
 
             // Prompt user for list actions
             while (true) {
-                // ScannerThread scannerThread = new ScannerThread(scanner);
-                // scannerThread.start(); // Start a new thread for the next input
-                // Wait for the user input thread to finish
-                // try {
-                //     scannerThread.join();
-                // } catch (InterruptedException e) {
-                //     e.printStackTrace();
-                // }
-
-
                 int choice = scanner.nextInt();
 
                 switch (choice) {
                     case 1:
-                        // timer.cancel();
-                        // scannerThread.interrupt();
                         handleAddItem(new Scanner(System.in), shoppingList);
                         break;
                     case 2:
-                        // timer.cancel();
-                        // scannerThread.interrupt();
                         handleUpdateItem(new Scanner(System.in), shoppingList);
                         break;
                     case 3:
-                        // timer.cancel();
-                        // scannerThread.interrupt();
+                        handleAccessList(new Scanner(System.in), listUUID);
+                        break;
+                    case 4:
                         ShoppingInterface.clearConsole();
                         mainMenu(scanner);
                         break;
@@ -268,17 +268,19 @@ public class Client {
     private static void displayAndRefreshListPeriodically(Scanner scanner, ShoppingList shoppingList) {
         // Schedule a task to refresh and display the list every 5 seconds
         //timer.scheduleAtFixedRate(new TimerTask() {
-            // @Override
-            // public void run() {
-                // refresh the list
-                ShoppingInterface.clearConsole();
-                ShoppingInterface.displayShoppingList(getListFromServerOrLocal(shoppingList.getListID()));
-                System.out.println("\nList Actions:");
-                System.out.println("1- Add Item");
-                System.out.println("2- Update Item");
-                System.out.println("3- Exit");
-                System.out.print("Enter your choice: ");
-            // }
+        // @Override
+        // public void run() {
+        // refresh the list
+        ShoppingInterface.clearConsole();
+//        ShoppingInterface.displayShoppingList(getListFromServerOrLocal(shoppingList.getListID()));
+        ShoppingInterface.displayShoppingList(shoppingList);
+        System.out.println("\nList Actions:");
+        System.out.println("1- Add Item");
+        System.out.println("2- Update Item");
+        System.out.println("3- Refresh");
+        System.out.println("4- Exit");
+        System.out.print("Enter your choice: ");
+        // }
         //}, 0, 5000); // Run the task every 5 seconds
     }
 
@@ -459,7 +461,7 @@ public class Client {
         List<String> preferenceList = ring.getPreferenceList(listUUID, 3);
 
         // print the preference list
-        ShoppingInterface.printShoppingList(preferenceList);
+        ShoppingInterface.printPreferenceList(preferenceList);
 
         // loop through the preference list and try to get the list from the cloud
         int serversDown = 0;
