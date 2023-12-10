@@ -99,7 +99,7 @@ public abstract class ServerHandler implements HttpHandler {
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url.toString()))
-                    .timeout(java.time.Duration.ofSeconds(3))
+                    .timeout(java.time.Duration.ofMillis(400))
                     .POST(HttpRequest.BodyPublishers.ofByteArray(content))
                     .build();
 
@@ -131,7 +131,7 @@ public abstract class ServerHandler implements HttpHandler {
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("http://" + server + "/read?uuid=" + uuid + "&cord=false"))
-                    .timeout(java.time.Duration.ofSeconds(3))
+                    .timeout(java.time.Duration.ofMillis(400))
                     .GET()
                     .build();
 

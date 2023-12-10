@@ -225,31 +225,32 @@ public class Client {
 
             // Prompt user for list actions
             while (true) {
-                ScannerThread scannerThread = new ScannerThread(scanner);
-                scannerThread.start(); // Start a new thread for the next input
+                // ScannerThread scannerThread = new ScannerThread(scanner);
+                // scannerThread.start(); // Start a new thread for the next input
                 // Wait for the user input thread to finish
-                try {
-                    scannerThread.join();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                // try {
+                //     scannerThread.join();
+                // } catch (InterruptedException e) {
+                //     e.printStackTrace();
+                // }
 
-                int choice = scannerThread.getChoice();
+
+                int choice = scanner.nextInt();
 
                 switch (choice) {
                     case 1:
-                        timer.cancel();
-                        scannerThread.interrupt();
+                        // timer.cancel();
+                        // scannerThread.interrupt();
                         handleAddItem(new Scanner(System.in), shoppingList);
                         break;
                     case 2:
-                        timer.cancel();
-                        scannerThread.interrupt();
+                        // timer.cancel();
+                        // scannerThread.interrupt();
                         handleUpdateItem(new Scanner(System.in), shoppingList);
                         break;
                     case 3:
-                        timer.cancel();
-                        scannerThread.interrupt();
+                        // timer.cancel();
+                        // scannerThread.interrupt();
                         ShoppingInterface.clearConsole();
                         mainMenu(scanner);
                         break;
@@ -266,9 +267,9 @@ public class Client {
 
     private static void displayAndRefreshListPeriodically(Scanner scanner, ShoppingList shoppingList) {
         // Schedule a task to refresh and display the list every 5 seconds
-        timer.scheduleAtFixedRate(new TimerTask() {
-            @Override
-            public void run() {
+        //timer.scheduleAtFixedRate(new TimerTask() {
+            // @Override
+            // public void run() {
                 // refresh the list
                 ShoppingInterface.clearConsole();
                 ShoppingInterface.displayShoppingList(getListFromServerOrLocal(shoppingList.getListID()));
@@ -277,8 +278,8 @@ public class Client {
                 System.out.println("2- Update Item");
                 System.out.println("3- Exit");
                 System.out.print("Enter your choice: ");
-            }
-        }, 0, 5000); // Run the task every 5 seconds
+            // }
+        //}, 0, 5000); // Run the task every 5 seconds
     }
 
     private static void handleAddItem(Scanner scanner, ShoppingList shoppingList) {
