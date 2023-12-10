@@ -64,9 +64,9 @@ public class Server {
 
             // Add a shutdown hook to stop the server
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                System.out.println("Shutting down");
+                System.out.println(this.serverName + " shutting down");
                 server.stop(5); // Stop the server with a delay of 5 seconds
-                System.out.println("Server stopped");
+                System.out.println(this.serverName + " s stopped");
             }));
         } catch (Exception e) {
             e.printStackTrace();

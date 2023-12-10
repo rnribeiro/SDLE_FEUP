@@ -41,9 +41,9 @@ public class KillHandler extends ServerHandler {
         }
         sendResponse(exchange, 200, "Killed...");
 
-        System.out.println("Shutting down");
+        System.out.println(serverName + " shutting down");
         this.server.stop(2);
-        System.out.println("Server stopped");
+        System.out.println(serverName + " stopped");
 
 
     }
