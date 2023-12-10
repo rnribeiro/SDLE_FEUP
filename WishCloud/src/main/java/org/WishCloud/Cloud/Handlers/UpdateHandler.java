@@ -2,19 +2,13 @@ package org.WishCloud.Cloud.Handlers;
 
 import com.sun.net.httpserver.HttpExchange;
 import org.WishCloud.Database.SQl;
-import org.WishCloud.ShoppingList.ShoppingList;
+import org.WishCloud.CRDT.ShoppingList;
 import org.WishCloud.Utils.Ring;
 import org.WishCloud.Utils.Serializer;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class UpdateHandler extends ServerHandler {
 
@@ -37,10 +31,10 @@ public class UpdateHandler extends ServerHandler {
         }
 
         // check if the shopping list is null or already exists in database
-        ShoppingList localSL = getDb().getShoppingList(params.get("uuid"));
+        ShoppingList localSL = getDb().read(params.get("uuid"));
         ShoppingList clientSl = Serializer.deserialize(body);
         if (localSL == null) {
-            sendResponse(exchange, 400, "Shopping list doesn't exist!");
+            sendResponse(exchange, 404, "Shopping list doesn't exist!");
             return;
         } else if (clientSl == null) {
             sendResponse(exchange, 400, "Shopping list corrupted!");
@@ -48,7 +42,7 @@ public class UpdateHandler extends ServerHandler {
         }
 
         ShoppingList mergedSL = localSL.merge(clientSl.getListItems());
-        if (getDb().updateShoppingList(mergedSL)) {
+        if (getDb().write(mergedSL, "update")) {
             sendResponse(exchange, 500, "Error updating shopping list on database!");
             return;
         }
@@ -58,49 +52,7 @@ public class UpdateHandler extends ServerHandler {
             return;
         }
 
-        List<String> orderedNodes = getRing().getPreferenceList(params.get("uuid"));
-        List<String> preferenceList = getRing().getPreferenceList(params.get("uuid"), this.replicas);
-        Set<String> servedNodes = new HashSet<>();
-        Set<String> hintedNodes = new HashSet<>();
-        servedNodes.add(getServerName());
-        for (String server : orderedNodes.subList(orderedNodes.indexOf(getServerName())+1, orderedNodes.size())) {
-            // Check if the replica creation was successful
-            if (servedNodes.size() == this.replicas) { break; }
-
-            String hintedNode = null;
-            StringBuilder url = new StringBuilder("http://" + server + "/update?uuid=" + params.get("uuid") + "&cord=false");
-            if (!preferenceList.contains(server)) {
-                // find server in the preference list that was not served yet
-                hintedNode = preferenceList.stream()
-                        .filter(node -> !servedNodes.contains(node) && !hintedNodes.contains(node))
-                        .findFirst().orElse(null);
-                url.append("&hinted=").append(hintedNode);
-            }
-
-            // send the shopping list to the next server in the ring
-            HttpClient client = HttpClient.newHttpClient();
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url.toString()))
-                    .POST(HttpRequest.BodyPublishers.ofByteArray(body))
-                    .build();
-
-            try {
-                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-                if (response.statusCode() == 200) {
-
-                    System.out.println("\nUpdated replica of list "+ params.get("uuid") + " in " + server + "! Server Response: " + response.body());
-                    servedNodes.add(server);
-                    if (hintedNode != null) { hintedNodes.add(hintedNode); }
-                } else {
-                    // print "Server name says:"
-                    System.out.println("\nFailed to update replica of list "+ params.get("uuid") + " in " + server + "! Server Response: " + response.body());
-
-                }
-            } catch (InterruptedException e) {
-                System.out.println(e.getMessage());
-            }
-        }
-
+        List<String> servedNodes = put(Serializer.serialize(mergedSL), "update", params.get("uuid"));
         if (servedNodes.size() != this.replicas) {
             sendResponse(exchange, 500, "Error updating replicas!");
             return;

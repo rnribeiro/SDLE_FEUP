@@ -52,6 +52,7 @@ public class Server {
             server.createContext("/create", new CreateHandler(this.serverName, ring, db));
             server.createContext("/read", new ReadHandler(this.serverName, ring, db));
             server.createContext("/update", new UpdateHandler(this.serverName, ring, db));
+            server.createContext("/delete", new DeleteHandler(this.serverName, ring, db));
             server.createContext("/refresh", new RefreshHandler());
 
             // set executor
@@ -70,14 +71,6 @@ public class Server {
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    public static void main(String[] args) {
-//        // create server
-//        Server server = new Server("localhost", 8000, List.of("localhost:8000", "localhost:8001"));
-//
-//        // start server
-//        server.start();
     }
 }
 
