@@ -34,7 +34,7 @@ public class ShoppingInterface {
 
     public static void displayCreationSuccess(String listUUID, boolean error) {
         if (!error) {
-            System.out.println("List created successfully locally. UUID: " + listUUID);
+            System.out.println("\nList created successfully locally.\nUUID: " + listUUID);
         } else {
             System.out.println("Failed to create list locally.");
         }
@@ -59,8 +59,8 @@ public class ShoppingInterface {
     }
 
     public static void displayShoppingList(ShoppingList shoppingList) {
-        System.out.println("List Name: " + shoppingList.getName());
-        System.out.println("List Items:");
+        System.out.println("\nList Name: " + shoppingList.getName());
+        System.out.println("\nList Items:");
         System.out.println("------------------------------------------------------------");
         System.out.printf("%-20s | %-10s | %-10s | %-20s\n", "Item Name", "Value", "Counter", "Author");
         System.out.println("------------------------------------------------------------");
@@ -93,7 +93,7 @@ public class ShoppingInterface {
         System.out.println("\nAttempting to synchronize list with cloud...");
     }
 
-    public static void printShoppingList(List<String> preferenceList) {
+    public static void printPreferenceList(List<String> preferenceList) {
         // print the preference list
         System.out.println("\nPreference List:");
         for (String server : preferenceList) {

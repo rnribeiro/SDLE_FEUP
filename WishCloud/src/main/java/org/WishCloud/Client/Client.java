@@ -110,21 +110,25 @@ public class Client {
         byte[] serializedList = Serializer.serialize(shoppingList);
 
         // synchronize the list with the cloud
-        boolean syncSuccess = synchronizeListWithServer(listUUID, serializedList);
+        boolean syncSuccess = synchronizeListWithServer(listUUID, serializedList, true);
 
         // display synchronization status
         ShoppingInterface.displaySynchronizationStatus(syncSuccess);
     }
 
-    private static boolean synchronizeListWithServer(String listUUID, byte[] serializedList) {
+    private static boolean synchronizeListWithServer(String listUUID, byte[] serializedList, boolean firstTime) {
         try {
-            ShoppingInterface.printSyncAttempt();
+//            ShoppingInterface.printSyncAttempt();
 
             // get the preference list
             List<String> preferenceList = ring.getPreferenceList(listUUID, 3);
 
-            ShoppingInterface.printShoppingList(preferenceList);
+            if (firstTime) {
+                // print the preference list
+                ShoppingInterface.printPreferenceList(preferenceList);
+            }
 
+            int serversDown = 0;
             // loop through the preference list and try to create the list in the cloud
             for (String server : preferenceList) {
 
@@ -141,40 +145,72 @@ public class Client {
 
                     // check the response code
                     if (response.statusCode() == 200) {
-                        System.out.println("\nReplica in " + server + " created! Server Response: " + response.body());
+                        if (firstTime) {
+                            System.out.println("\nReplica of list " + listUUID + " created in " + server + "!\nServer Response: " + response.body());
+                        }
                         return true;
                     } else {
-                        System.out.println("\nReplica in " + server + " failed! Server Response: " + response.body());
+                        if (firstTime) {
+                            System.out.println("\nReplica of list " + listUUID + " failed in " + server + "!\nServer Response: " + response.body());
+                        }
                     }
 
                 } catch (ConnectException | InterruptedException e) {
-                    System.out.println(e.getMessage());
+                    // handle connection error
+//                    System.out.println("Failed to create replica in " + server + "! Server Down!");
+                    serversDown++;
                 }
 
+            }
+            if (serversDown == 3 && firstTime) {
+                System.out.println("\nAll servers are down. Please try again later.");
+                return false;
             }
             return false;
 
         } catch (IOException e) {
+
             e.printStackTrace();
             return false;
         }
     }
 
-    private static ShoppingList getListFromServerOrLocal(String listUUID) {
-        ShoppingList shoppingList = getListFromServer(listUUID);
+    private static ShoppingList getListFromServerOrLocal(String listUUID, boolean firstTime) {
+        ShoppingList shoppingList = getListFromServer(listUUID, firstTime);
         ShoppingList list;
         if (shoppingList == null) {
             // print getting list from local
             System.out.println("\nAttempting to get list from local database...");
+            if (!firstTime) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
             list = db.getShoppingList(listUUID);
-            synchronizeListWithServer(listUUID, Serializer.serialize(list));
+            synchronizeListWithServer(listUUID, Serializer.serialize(list), false);
         } else {
             // merge the local list with the server list
             System.out.println("\nAttempting to get list from local database...");
+            if (!firstTime) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
             ShoppingList localList = db.getShoppingList(listUUID);
             if (localList != null) {
                 // print merging lists
                 System.out.println("\nMerging lists...");
+                if (!firstTime) {
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
                 list = shoppingList.merge(localList.getListItems());
                 db.updateShoppingList(list);
                 updateListInCloud(listUUID, Serializer.serialize(list));
@@ -219,7 +255,7 @@ public class Client {
         }
 
         // get the list from the server or local database
-        ShoppingList shoppingList = getListFromServerOrLocal(listUUID);
+        ShoppingList shoppingList = getListFromServerOrLocal(listUUID, true);
 
         if (shoppingList != null) {
             ShoppingInterface.clearConsole();
@@ -229,7 +265,7 @@ public class Client {
 
             // Prompt user for list actions
             while (true) {
-                ScannerThread scannerThread = new ScannerThread(scanner);
+                ScannerThread scannerThread = new ScannerThread(new Scanner(System.in));
                 scannerThread.start(); // Start a new thread for the next input
                 // Wait for the user input thread to finish
                 try {
@@ -252,6 +288,11 @@ public class Client {
                         handleUpdateItem(new Scanner(System.in), shoppingList);
                         break;
                     case 3:
+                        List<String> preferenceList = ring.getPreferenceList(listUUID, 3);
+                        ShoppingInterface.printPreferenceList(preferenceList);
+                        handleAccessList(scanner, listUUID);
+                        break;
+                    case 4:
                         timer.cancel();
                         scannerThread.interrupt();
                         ShoppingInterface.clearConsole();
@@ -275,14 +316,24 @@ public class Client {
             public void run() {
                 // refresh the list
                 ShoppingInterface.clearConsole();
-                ShoppingInterface.displayShoppingList(getListFromServerOrLocal(shoppingList.getListID()));
+                System.out.println("Refreshing list...");
+                // wait
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+//                ShoppingInterface.clearConsole();
+                ShoppingInterface.displayShoppingList(getListFromServerOrLocal(shoppingList.getListID(), false));
                 System.out.println("\nList Actions:");
                 System.out.println("1- Add Item");
                 System.out.println("2- Update Item");
-                System.out.println("3- Exit");
+                System.out.println("3- Show Preference List");
+                System.out.println("4- Exit");
                 System.out.print("Enter your choice: ");
             }
-        }, 0, 5000); // Run the task every 5 seconds
+        }, 0, 10000);
     }
 
     private static void handleAddItem(Scanner scanner, ShoppingList shoppingList) {
@@ -319,10 +370,10 @@ public class Client {
         }
 
         // get list from server
-        ShoppingList remoteList = getListFromServer(shoppingList.getListID());
+        ShoppingList remoteList = getListFromServer(shoppingList.getListID(), false);
 
         if (remoteList == null) {
-            synchronizeListWithServer(shoppingList.getListID(), Serializer.serialize(shoppingList));
+            synchronizeListWithServer(shoppingList.getListID(), Serializer.serialize(shoppingList), false);
         } else {
             shoppingList = shoppingList.merge(remoteList.getListItems());
         }
@@ -391,10 +442,10 @@ public class Client {
         }
 
         // get list from server
-        ShoppingList remoteList = getListFromServer(shoppingList.getListID());
+        ShoppingList remoteList = getListFromServer(shoppingList.getListID(), false);
 
         if (remoteList == null) {
-            synchronizeListWithServer(shoppingList.getListID(), Serializer.serialize(shoppingList));
+            synchronizeListWithServer(shoppingList.getListID(), Serializer.serialize(shoppingList), false);
         } else {
             shoppingList = shoppingList.merge(remoteList.getListItems());
         }
@@ -460,19 +511,28 @@ public class Client {
         }
     }
 
-    private static ShoppingList getListFromServer(String listUUID) {
+    private static int getServersDown = 0;
+
+    private static ShoppingList getListFromServer(String listUUID, boolean firstTime) {
         try {
             // getting list from server
             System.out.println("\nAttempting to get list from cloud...");
-
+            if (!firstTime) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
             // get the preference list
             List<String> preferenceList = ring.getPreferenceList(listUUID, 3);
 
             // print the preference list
-            ShoppingInterface.printShoppingList(preferenceList);
-
+            if (firstTime) {
+                ShoppingInterface.printPreferenceList(preferenceList);
+            }
+            getServersDown = 0;
             // loop through the preference list and try to get the list from the cloud
-            int serversDown = 0;
             for (String server : preferenceList) {
 
                 // create http client and request
@@ -493,7 +553,7 @@ public class Client {
                         System.out.println("\nList not found in " + server + "!");
                         ShoppingList localList = db.getShoppingList(listUUID); // get the list from local database
                         if (localList != null) { // if the list exists in local database then synchronize it with the server
-                            synchronizeListWithServer(listUUID, Serializer.serialize(localList));
+                            synchronizeListWithServer(listUUID, Serializer.serialize(localList), false);
                         }
                     } else {
                         System.out.println(response.statusCode());
@@ -501,11 +561,11 @@ public class Client {
 
                     }
                 } catch (InterruptedException | ConnectException e) {
-                    serversDown++;
+                    getServersDown++;
                 }
             }
-            if (serversDown == 3) {
-                System.out.println("\nAll servers are down. Please try again later.");
+            if (getServersDown == 3) {
+                System.out.println("All servers are down. Please try again later.");
                 return null;
             }
         } catch (IOException e) {
