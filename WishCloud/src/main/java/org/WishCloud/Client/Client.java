@@ -111,7 +111,7 @@ public class Client {
         byte[] serializedList = Serializer.serialize(shoppingList);
 
         // synchronize the list with the cloud
-        boolean syncSuccess = synchronizeListWithServer(listUUID, serializedList, true);
+        boolean syncSuccess = synchronizeListWithServer(listUUID, serializedList);
 
         // display synchronization status
         ShoppingInterface.displaySynchronizationStatus(syncSuccess);
@@ -157,8 +157,8 @@ public class Client {
         return false;
     }
 
-    private static ShoppingList getListFromServerOrLocal(String listUUID, boolean firstTime) {
-        ShoppingList shoppingList = getListFromServer(listUUID, firstTime);
+    private static ShoppingList getListFromServerOrLocal(String listUUID) {
+        ShoppingList shoppingList = getListFromServer(listUUID);
         ShoppingList list;
         if (shoppingList == null) {
             // print getting list from local
@@ -228,7 +228,7 @@ public class Client {
         }
 
         // get the list from the server or local database
-        ShoppingList shoppingList = getListFromServerOrLocal(listUUID, true);
+        ShoppingList shoppingList = getListFromServerOrLocal(listUUID);
 
         if (shoppingList != null) {
             ShoppingInterface.clearConsole();
@@ -318,10 +318,10 @@ public class Client {
         }
 
         // get list from server
-        ShoppingList remoteList = getListFromServer(shoppingList.getListID(), false);
+        ShoppingList remoteList = getListFromServer(shoppingList.getListID());
 
         if (remoteList == null) {
-            synchronizeListWithServer(shoppingList.getListID(), Serializer.serialize(shoppingList), false);
+            synchronizeListWithServer(shoppingList.getListID(), Serializer.serialize(shoppingList));
         } else {
             shoppingList = shoppingList.merge(remoteList.getListItems());
         }
@@ -390,10 +390,10 @@ public class Client {
         }
 
         // get list from server
-        ShoppingList remoteList = getListFromServer(shoppingList.getListID(), false);
+        ShoppingList remoteList = getListFromServer(shoppingList.getListID());
 
         if (remoteList == null) {
-            synchronizeListWithServer(shoppingList.getListID(), Serializer.serialize(shoppingList), false);
+            synchronizeListWithServer(shoppingList.getListID(), Serializer.serialize(shoppingList));
         } else {
             shoppingList = shoppingList.merge(remoteList.getListItems());
         }
