@@ -2,7 +2,7 @@ package ShoppingList;
 
 import org.junit.jupiter.api.Test;
 import org.WishCloud.CRDT.CRDT;
-import org.WishCloud.ShoppingList.ShoppingList;
+import org.WishCloud.CRDT.ShoppingList;
 
 import java.util.HashMap;
 import java.util.Map;

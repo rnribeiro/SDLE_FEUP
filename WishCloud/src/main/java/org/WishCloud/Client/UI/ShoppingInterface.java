@@ -1,7 +1,7 @@
 package org.WishCloud.Client.UI;
 
 import org.WishCloud.CRDT.CRDT;
-import org.WishCloud.ShoppingList.ShoppingList;
+import org.WishCloud.CRDT.ShoppingList;
 
 import java.util.List;
 import java.util.Map;

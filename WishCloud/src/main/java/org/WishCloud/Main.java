@@ -1,7 +1,6 @@
 package org.WishCloud;
 
-import org.WishCloud.Database.SQl;
-import org.WishCloud.ShoppingList.ShoppingList;
+import org.WishCloud.CRDT.ShoppingList;
 import org.WishCloud.CRDT.CRDT;
 import org.WishCloud.Utils.Serializer;
 

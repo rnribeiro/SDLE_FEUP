@@ -2,17 +2,10 @@ package org.WishCloud.Cloud.Handlers;
 
 import com.sun.net.httpserver.HttpExchange;
 import org.WishCloud.Database.SQl;
-import org.WishCloud.ShoppingList.ShoppingList;
+import org.WishCloud.CRDT.ShoppingList;
 import org.WishCloud.Utils.Ring;
-import org.WishCloud.Utils.Serializer;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 
 public class DeleteHandler extends ServerHandler{
@@ -36,47 +29,17 @@ public class DeleteHandler extends ServerHandler{
         }
 
         // check if the shopping list is null or already exists in database
-        ShoppingList shoppingList = getDb().getShoppingList(params.get("uuid"));
+        ShoppingList shoppingList = getDb().read(params.get("uuid"));
         if (shoppingList == null) {
-            sendResponse(exchange, 400, "Shopping list doesn't exist!");
+            sendResponse(exchange, 404, "Shopping list doesn't exist!");
             return;
         }
 
-        if (!params.get("cord").equals("true")) {
-            sendResponse(exchange, 200, Arrays.toString(Serializer.serialize(shoppingList)));
+        if (getDb().write(shoppingList, "delete")) {
+            sendResponse(exchange, 500, "Error deleting shopping list from database!");
             return;
         }
 
-        int replicasRemaining = this.replicas - 1;
-        List<String> orderedList = getRing().getPreferenceList(params.get("uuid"));
-        for (String server : orderedList.subList(orderedList.indexOf(getServerName()) + 1, orderedList.size())) {
-            if (replicasRemaining == 0) { break; }
-
-            // send the shopping list to the next server in the ring
-            HttpClient client = HttpClient.newHttpClient();
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("http://" + server + "/read?uuid=" + params.get("uuid") + "&cord=false"))
-                    .GET()
-                    .build();
-
-            try {
-                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-                if (response.statusCode() == 200) {
-                    System.out.println("\nReplica in " + server + " created! Server Response: " + response.body());
-                    ShoppingList newSL = Serializer.deserialize(response.body().getBytes());
-                    shoppingList.merge(newSL.getListItems());
-                    replicasRemaining--;
-                }
-            } catch (InterruptedException e) {
-                System.out.println(e.getMessage());
-            }
-        }
-
-        if (replicasRemaining != 0) {
-            sendResponse(exchange, 500, "Error loading shopping list on database!");
-            return;
-        }
-
-        sendResponse(exchange, 200, Arrays.toString(Serializer.serialize(shoppingList)));
+        sendResponse(exchange, 200, "Shopping list deleted!");
     }
 }

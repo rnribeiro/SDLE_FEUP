@@ -1,21 +1,14 @@
 package org.WishCloud.Cloud.Handlers;
 
 import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
 import org.WishCloud.Database.SQl;
-import org.WishCloud.ShoppingList.ShoppingList;
+import org.WishCloud.CRDT.ShoppingList;
 import org.WishCloud.Utils.Ring;
 import org.WishCloud.Utils.Serializer;
 
 import java.io.IOException;
-import java.io.OutputStream;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class ReadHandler extends ServerHandler {
     public ReadHandler(String serverName, Ring ring, SQl db) {
@@ -37,7 +30,7 @@ public class ReadHandler extends ServerHandler {
         }
 
         // check if the shopping list is null or already exists in database
-        ShoppingList shoppingList = getDb().getShoppingList(params.get("uuid"));
+        ShoppingList shoppingList = getDb().read(params.get("uuid"));
         if (shoppingList == null) {
             sendResponse(exchange, 404, "Shopping list doesn't exist!");
             return;
@@ -47,36 +40,11 @@ public class ReadHandler extends ServerHandler {
             sendResponse(exchange, 200, Serializer.serialize(shoppingList));
             return;
         }
-//        ShoppingList mergedSL = null;
-        int replicasRemaining = this.replicas - 1;
-        List<String> orderedList = getRing().getPreferenceList(params.get("uuid"));
-        for (String server : orderedList.subList(orderedList.indexOf(getServerName()) + 1, orderedList.size())) {
-            if (replicasRemaining == 0) { break; }
 
-            // send the shopping list to the next server in the ring
-            HttpClient client = HttpClient.newHttpClient();
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("http://" + server + "/read?uuid=" + params.get("uuid") + "&cord=false"))
-                    .GET()
-                    .build();
+        AtomicReference<ShoppingList>  ref = new AtomicReference<>(shoppingList);
+        int replicasRemaining = get(ref, params.get("uuid"));
 
-            try {
-                HttpResponse<byte[]> response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
-                if (response.statusCode() == 200) {
-                    System.out.println("\nReplica of list " + params.get("uuid") + " read from " +  server + "! Server Response: " + response.body());
-                    ShoppingList newSL = Serializer.deserialize(response.body());
-                    shoppingList = shoppingList.merge(newSL.getListItems());
-                    replicasRemaining--;
-                } else {
-                    System.out.println("\nError reading replica of list " + params.get("uuid") + " from " +  server + "! Server Response: " + response.body());
-                }
-            } catch (InterruptedException e) {
-                System.out.println("\nError reading replica of list " + params.get("uuid") + " from " +  server + "!");
-                System.out.println(e.getMessage());
-            }
-        }
-
-        if (replicasRemaining != 0 || shoppingList == null) {
+        if (replicasRemaining != 0 || ref.get() == null) {
             sendResponse(exchange, 500, "Error retrieving shopping list!");
             return;
         }

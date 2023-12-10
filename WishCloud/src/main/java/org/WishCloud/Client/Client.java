@@ -10,7 +10,7 @@ import java.util.*;
 import org.WishCloud.CRDT.CRDT;
 import org.WishCloud.Client.UI.ShoppingInterface;
 import org.WishCloud.Database.SQl;
-import org.WishCloud.ShoppingList.ShoppingList;
+import org.WishCloud.CRDT.ShoppingList;
 import org.WishCloud.Utils.Ring;
 import org.WishCloud.Utils.Serializer;
 
@@ -104,7 +104,7 @@ public class Client {
 
         // create the shopping list
         ShoppingList shoppingList = new ShoppingList(listName, listUUID, new HashMap<>());
-        ShoppingInterface.displayCreationSuccess(listUUID, db.insertSL(shoppingList));
+        ShoppingInterface.displayCreationSuccess(listUUID, db.write(shoppingList, "create"));
 
         // serialize the shopping list
         byte[] serializedList = Serializer.serialize(shoppingList);
@@ -166,18 +166,18 @@ public class Client {
         if (shoppingList == null) {
             // print getting list from local
             System.out.println("\nAttempting to get list from local database...");
-            list = db.getShoppingList(listUUID);
+            list = db.read(listUUID);
         } else {
             // merge the local list with the server list
             System.out.println("\nAttempting to get list from local database...");
-            ShoppingList localList = db.getShoppingList(listUUID);
+            ShoppingList localList = db.read(listUUID);
             if (localList != null) {
                 // print merging lists
                 System.out.println("\nMerging lists...");
                 list = shoppingList.merge(localList.getListItems());
-                db.updateShoppingList(list);
+                db.write(list, "update");
             } else {
-                db.insertSL(shoppingList);
+                db.write(shoppingList, "create");
                 list = shoppingList;
             }
         }
@@ -337,7 +337,7 @@ public class Client {
         shoppingList.addItem(itemName, crdtItem);
 
         // try updating the list in the database
-        if (!db.updateShoppingList(shoppingList)) {
+        if (!db.write(shoppingList, "update")) {
             System.out.println("Item locally added successfully.");
         } else {
             System.out.println("Failed to add item.");
@@ -402,7 +402,7 @@ public class Client {
         shoppingList.updateItem(itemName, crdtItem);
 
         // try updating the list in the database
-        if (!db.updateShoppingList(shoppingList)) {
+        if (!db.write(shoppingList, "update")) {
             System.out.println("Item locally updated successfully.");
         } else {
             System.out.println("Failed to update item.");
@@ -490,7 +490,7 @@ public class Client {
                         return Serializer.deserialize(response.body());
                     } else if (response.statusCode() == 404) { // list not found in server
                         System.out.println("\nList not found in " + server + "!");
-                        ShoppingList localList = db.getShoppingList(listUUID); // get the list from local database
+                        ShoppingList localList = db.read(listUUID); // get the list from local database
                         if (localList != null) { // if the list exists in local database then synchronize it with the server
                             synchronizeListWithServer(listUUID, Serializer.serialize(localList));
                         }
