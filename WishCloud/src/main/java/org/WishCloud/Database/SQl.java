@@ -18,6 +18,15 @@ public class SQl {
                 name text NOT NULL,
             	uuid text NOT NULL PRIMARY KEY
             );""";
+
+    private static final String sql_lists_hinted = """
+            CREATE TABLE IF NOT EXISTS lists (
+                name text NOT NULL,
+            	uuid text NOT NULL PRIMARY KEY,
+            	server text NOT NULL,
+            	method text NOT NULL
+            );""";
+
     private static final String sql_items = """
             CREATE TABLE IF NOT EXISTS items (
             	name text NOT NULL,
@@ -33,7 +42,7 @@ public class SQl {
         this.dbName = "db_" + name + ".db";
     }
 
-    public void createDB() {
+    public void createDB(boolean hinted) {
         String path = System.getProperty("user.dir");
         Path fullPath = Paths.get(path, "DBs", this.dbName);
         if (fullPath.getParent().toFile().mkdirs()) {
@@ -50,9 +59,10 @@ public class SQl {
                 System.out.println("Connected to database.");
 
                 Statement stmt = conn.createStatement();
-                stmt.execute(sql_lists);
                 stmt.execute(sql_items);
-//                stmt.execute(sql_hinted_nodes);
+                if (!hinted) stmt.execute(sql_lists);
+                else stmt.execute(sql_lists_hinted);
+
             }
         } catch (SQLException e) {
             System.out.println(e.getMessage());
@@ -260,6 +270,10 @@ public class SQl {
             case "delete" -> deleteShoppingList(list.getListID());
             default -> true;
         };
+    }
+
+    public synchronized boolean write(ShoppingList list, String method, String hinted) {
+        return write(list, "insert");
     }
 
     public ShoppingList read(String listUUID) {

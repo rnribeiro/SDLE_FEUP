@@ -69,7 +69,7 @@ public abstract class ServerHandler implements HttpHandler {
         }
     }
 
-    protected List<String> put(byte[] content, String method, String uuid) {
+    protected List<String> put(byte[] content, String uuid) {
         List<String> orderedNodes = getRing().getPreferenceList(uuid);
         List<String> preferenceList = getRing().getPreferenceList(uuid, this.replicas);
         Set<String> servedNodes = new HashSet<>();
@@ -80,7 +80,7 @@ public abstract class ServerHandler implements HttpHandler {
             if (servedNodes.size() == this.replicas) { break; }
 
             String hintedNode = null;
-            StringBuilder url = new StringBuilder("http://" + server + "/" + method + "?uuid=" + uuid + "&cord=false");
+            StringBuilder url = new StringBuilder("http://" + server + "/upload" + "?uuid=" + uuid + "&cord=false");
             if (!preferenceList.contains(server)) {
                 // find server in the preference list that was not served yet
                 hintedNode = preferenceList.stream()
@@ -140,26 +140,6 @@ public abstract class ServerHandler implements HttpHandler {
 
         ref.set(shoppingList);
         return replicasRemaining;
-    }
-
-    protected void undoCreate(List<String> servedNodes) {
-        for (String server : servedNodes) {
-            // send the shopping list to the next server in the ring
-            HttpClient client = HttpClient.newHttpClient();
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("http://" + server + "/delete?uuid=" + server + "&cord=false"))
-                    .DELETE()
-                    .build();
-
-            try {
-                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-                if (response.statusCode() == 200 || response.statusCode() == 404) {
-                    System.out.println("\nReplica in " + server + " deleted! Server Response: " + response.body());
-                }
-            } catch (InterruptedException | IOException e) {
-                System.out.println(e.getMessage());
-            }
-        }
     }
 
     public SQl getDb() {

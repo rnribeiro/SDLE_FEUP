@@ -56,7 +56,7 @@ public class Client {
         System.out.println("Client UUID: " + clientUUID);
 
         db = new SQl(clientUUID);
-        db.createDB();
+        db.createDB(false);
 
         Scanner scanner = new Scanner(System.in);
 
@@ -131,7 +131,7 @@ public class Client {
                 // create http client and request
                 HttpClient client = HttpClient.newHttpClient();
                 HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create("http://" + server + "/create?uuid=" + listUUID + "&cord=true"))
+                        .uri(URI.create("http://" + server + "/upload?uuid=" + listUUID + "&cord=true"))
                         .POST(HttpRequest.BodyPublishers.ofByteArray(serializedList))
                         .build();
 
@@ -433,7 +433,7 @@ public class Client {
                 // create http client and request
                 HttpClient client = HttpClient.newHttpClient();
                 HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create("http://" + server + "/update?uuid=" + listID + "&cord=true"))
+                        .uri(URI.create("http://" + server + "/upload?uuid=" + listID + "&cord=true"))
                         .POST(HttpRequest.BodyPublishers.ofByteArray(serializedList))
                         .build();
 

@@ -2,6 +2,7 @@ package org.WishCloud;
 
 import org.WishCloud.CRDT.ShoppingList;
 import org.WishCloud.CRDT.CRDT;
+import org.WishCloud.Database.SQl;
 import org.WishCloud.Utils.Serializer;
 
 import java.net.URI;
@@ -13,6 +14,9 @@ import java.util.Map;
 public class Main {
     public static void main(String[] args) {
 
+        SQl db = new SQl("test");
+        db.createDB(false);
+
         // create shopping list
         Map<String,CRDT<String>> listItems = Map.of(
                 "item1", new CRDT<>("1", 1, "client1"),
@@ -21,23 +25,7 @@ public class Main {
         );
         ShoppingList shoppingList = new ShoppingList("test", "test", listItems);
 
-        System.out.println(shoppingList);
-
-        byte[] buffer = Serializer.serialize(shoppingList);
-        HttpClient client = HttpClient.newHttpClient();
-        HttpRequest request = HttpRequest.newBuilder(
-                        URI.create("http://localhost:8000/create?uuid=test"))
-                .header("accept", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofByteArray(buffer))
-                .build();
-
-        try {
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            System.out.println(response.body());
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-        }
-
+        System.out.println(db.write(shoppingList, "insert"));
         /*
         client
             create list id - done

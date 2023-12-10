@@ -29,7 +29,9 @@ public class Server {
         try {
             // create database
             SQl db = new SQl(this.serverIp + "_" + this.serverPort);
-            db.createDB();
+            db.createDB(false);
+            SQl db_hinted = new SQl(this.serverIp + "_" + this.serverPort + "_hinted");
+            db_hinted.createDB(true);
 
             // compute ring
             Ring ring = new Ring(HashSpace);
@@ -49,11 +51,8 @@ public class Server {
             HttpServer server = HttpServer.create(new InetSocketAddress(this.serverIp, this.serverPort), 0);
 
             // create contexts
-            server.createContext("/create", new CreateHandler(this.serverName, ring, db));
+            server.createContext("/upload", new UploadHandler(this.serverName, ring, db, db_hinted));
             server.createContext("/read", new ReadHandler(this.serverName, ring, db));
-            server.createContext("/update", new UpdateHandler(this.serverName, ring, db));
-            server.createContext("/delete", new DeleteHandler(this.serverName, ring, db));
-            server.createContext("/refresh", new RefreshHandler());
 
             // set executor
             server.setExecutor(threadPoolExecutor);
