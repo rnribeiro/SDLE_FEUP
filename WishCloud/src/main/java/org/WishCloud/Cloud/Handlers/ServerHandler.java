@@ -16,7 +16,10 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.*;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.net.http.HttpTimeoutException;
+
 
 public abstract class ServerHandler implements HttpHandler {
     protected final int replicas = 3;
@@ -96,6 +99,7 @@ public abstract class ServerHandler implements HttpHandler {
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url.toString()))
+                    .timeout(java.time.Duration.ofSeconds(3))
                     .POST(HttpRequest.BodyPublishers.ofByteArray(content))
                     .build();
 
@@ -106,7 +110,9 @@ public abstract class ServerHandler implements HttpHandler {
                     servedNodes.add(server);
                     if (hintedNode != null) { hintedNodes.add(hintedNode); }
                 }
-            } catch (InterruptedException | IOException e) {
+            }
+
+            catch (InterruptedException | IOException e) {
                 System.out.println(e.getMessage());
             }
         }
@@ -125,13 +131,14 @@ public abstract class ServerHandler implements HttpHandler {
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("http://" + server + "/read?uuid=" + uuid + "&cord=false"))
+                    .timeout(java.time.Duration.ofSeconds(3))
                     .GET()
                     .build();
 
             try {
                 HttpResponse<byte[]> response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
                 if (response.statusCode() == 200) {
-                    System.out.println("\nReplica in " + server + " created! Server Response: " + Arrays.toString(response.body()));
+                    System.out.println("\nReplica in " + server + " read! Server Response: " + Arrays.toString(response.body()));
                     ShoppingList newSL = Serializer.deserialize(response.body());
                     shoppingList = shoppingList.merge(newSL.getListItems());
                     replicasRemaining--;

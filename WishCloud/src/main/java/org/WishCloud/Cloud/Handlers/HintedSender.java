@@ -3,7 +3,6 @@ package org.WishCloud.Cloud.Handlers;
 import org.WishCloud.CRDT.ShoppingList;
 import org.WishCloud.Database.Backup;
 import org.WishCloud.Utils.Pair;
-import org.WishCloud.Utils.Ring;
 import org.WishCloud.Utils.Serializer;
 
 import java.io.IOException;

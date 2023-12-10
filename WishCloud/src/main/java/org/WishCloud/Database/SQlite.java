@@ -29,7 +29,7 @@ public abstract class SQlite {
             SQLiteConfig config = new SQLiteConfig();
             config.setJournalMode(SQLiteConfig.JournalMode.WAL);
             config.apply(this.conn);
-            System.out.println("Connected to database.");
+            //System.out.println("Connected to database.");
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }

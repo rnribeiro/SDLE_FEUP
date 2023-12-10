@@ -47,7 +47,7 @@ public class Storage extends SQlite{
             if (this.conn != null) {
                 DatabaseMetaData meta = conn.getMetaData();
                 // System.out.println("The driver name is " + meta.getDriverName());
-                System.out.println("Connected to database.");
+                System.out.println("Created Storage database.");
 
                 Statement stmt = conn.createStatement();
                 stmt.execute(sql_items);
