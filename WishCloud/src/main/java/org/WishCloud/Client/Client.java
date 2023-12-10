@@ -22,6 +22,7 @@ public class Client {
     private static Ring ring;
     private static List<String> seeds;
     private static final int HashSpace = 1 << 31;
+    private static Timer timer;
 
     public static void main(String[] args) {
 
@@ -184,6 +185,30 @@ public class Client {
         return list;
     }
 
+    private static class ScannerThread extends Thread {
+        private final Scanner scanner;
+        private int choice;
+
+        public ScannerThread(Scanner scanner) {
+            this.scanner = scanner;
+        }
+
+        public int getChoice() {
+            return choice;
+        }
+
+        @Override
+        public void run() {
+            try {
+                choice = scanner.nextInt();
+            } catch (Exception e) {
+                choice = -1; // Set a special value to indicate an error
+                scanner.next(); // Consume invalid input
+            }
+        }
+    }
+
+
     public static void handleAccessList(Scanner scanner, String listUUID) {
 
         // prompt user for list UUID if not coming from list menu
@@ -196,36 +221,40 @@ public class Client {
 
         if (shoppingList != null) {
             ShoppingInterface.clearConsole();
+            timer = new Timer(true);
 
-            // display the list
-            ShoppingInterface.displayShoppingList(shoppingList);
+            displayAndRefreshListPeriodically(scanner, shoppingList);
 
             // Prompt user for list actions
             while (true) {
-                ShoppingInterface.printListActions();
-                int choice;
+                ScannerThread scannerThread = new ScannerThread(scanner);
+                scannerThread.start(); // Start a new thread for the next input
+                // Wait for the user input thread to finish
                 try {
-                    choice = scanner.nextInt();
-                } catch (Exception e) {
-                    ShoppingInterface.displayInvalidChoice();
-                    scanner.next();
-                    continue;
+                    scannerThread.join();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
+
+                int choice = scannerThread.getChoice();
 
                 switch (choice) {
                     case 1:
-                        handleAddItem(scanner, shoppingList);
+                        timer.cancel();
+                        scannerThread.interrupt();
+                        handleAddItem(new Scanner(System.in), shoppingList);
                         break;
                     case 2:
-                        handleUpdateItem(scanner, shoppingList);
+                        timer.cancel();
+                        scannerThread.interrupt();
+                        handleUpdateItem(new Scanner(System.in), shoppingList);
                         break;
                     case 3:
+                        timer.cancel(); // Stop the timer when the user exits
+                        // stop scanner thread
+                        scannerThread.interrupt();
                         ShoppingInterface.clearConsole();
                         mainMenu(scanner);
-                        break;
-                    case 4:
-                        ShoppingInterface.clearConsole();
-                        handleAccessList(scanner, listUUID);
                         break;
                     default:
                         ShoppingInterface.displayInvalidChoice();
@@ -234,6 +263,25 @@ public class Client {
         } else {
             ShoppingInterface.displayListNotFound();
         }
+    }
+
+
+
+    private static void displayAndRefreshListPeriodically(Scanner scanner, ShoppingList shoppingList) {
+        // Schedule a task to refresh and display the list every 5 seconds
+        timer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                // refresh the list
+                ShoppingInterface.clearConsole();
+                ShoppingInterface.displayShoppingList(getListFromServerOrLocal(shoppingList.getListID()));
+                System.out.println("\nList Actions:");
+                System.out.println("1- Add Item");
+                System.out.println("2- Update Item");
+                System.out.println("3- Exit");
+                System.out.print("Enter your choice: ");
+            }
+        }, 0, 5000); // Run the task every 5 seconds
     }
 
     private static void handleAddItem(Scanner scanner, ShoppingList shoppingList) {
