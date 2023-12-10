@@ -9,7 +9,7 @@ import java.util.*;
 
 import org.WishCloud.CRDT.CRDT;
 import org.WishCloud.Client.UI.ShoppingInterface;
-import org.WishCloud.Database.SQl;
+import org.WishCloud.Database.Storage;
 import org.WishCloud.CRDT.ShoppingList;
 import org.WishCloud.Utils.Ring;
 import org.WishCloud.Utils.Serializer;
@@ -18,7 +18,7 @@ import org.WishCloud.Utils.Serializer;
 public class Client {
 
     private static String clientUUID;
-    private static SQl db;
+    private static Storage db;
     private static Ring ring;
     private static List<String> seeds;
     private static final int HashSpace = 1 << 31;
@@ -55,8 +55,8 @@ public class Client {
 
         System.out.println("Client UUID: " + clientUUID);
 
-        db = new SQl(clientUUID);
-        db.createDB(false);
+        db = new Storage(clientUUID);
+        db.createDB();
 
         Scanner scanner = new Scanner(System.in);
 

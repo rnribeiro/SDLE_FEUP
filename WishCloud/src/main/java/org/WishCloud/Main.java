@@ -2,20 +2,15 @@ package org.WishCloud;
 
 import org.WishCloud.CRDT.ShoppingList;
 import org.WishCloud.CRDT.CRDT;
-import org.WishCloud.Database.SQl;
-import org.WishCloud.Utils.Serializer;
+import org.WishCloud.Database.Storage;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.util.Map;
 
 public class Main {
     public static void main(String[] args) {
 
-        SQl db = new SQl("test");
-        db.createDB(false);
+        Storage db = new Storage("test");
+        db.createDB();
 
         // create shopping list
         Map<String,CRDT<String>> listItems = Map.of(

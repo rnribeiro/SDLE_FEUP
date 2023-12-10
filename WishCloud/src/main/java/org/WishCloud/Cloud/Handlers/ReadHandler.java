@@ -1,7 +1,8 @@
 package org.WishCloud.Cloud.Handlers;
 
 import com.sun.net.httpserver.HttpExchange;
-import org.WishCloud.Database.SQl;
+import org.WishCloud.Database.Backup;
+import org.WishCloud.Database.Storage;
 import org.WishCloud.CRDT.ShoppingList;
 import org.WishCloud.Utils.Ring;
 import org.WishCloud.Utils.Serializer;
@@ -11,8 +12,8 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class ReadHandler extends ServerHandler {
-    public ReadHandler(String serverName, Ring ring, SQl db) {
-        super(serverName, ring, db);
+    public ReadHandler(String serverName, Ring ring, Storage db, Backup db_hinted) {
+        super(serverName, ring, db, db_hinted);
     }
 
     @Override
@@ -43,8 +44,9 @@ public class ReadHandler extends ServerHandler {
         // retrieve replica from database
         ShoppingList localSL;
         if (!prefList) {
+            AtomicReference<String> ref = new AtomicReference<>(null);
             // read from hinted database
-            localSL = getDb().read(params.get("uuid"));
+            localSL = getDb_backup().read(params.get("uuid"), ref);
         } else {
             localSL = getDb().read(params.get("uuid"));
         }

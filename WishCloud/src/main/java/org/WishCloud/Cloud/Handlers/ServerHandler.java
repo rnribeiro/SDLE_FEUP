@@ -3,7 +3,8 @@ package org.WishCloud.Cloud.Handlers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
-import org.WishCloud.Database.SQl;
+import org.WishCloud.Database.Backup;
+import org.WishCloud.Database.Storage;
 import org.WishCloud.CRDT.ShoppingList;
 import org.WishCloud.Utils.Ring;
 import org.WishCloud.Utils.Serializer;
@@ -21,12 +22,14 @@ public abstract class ServerHandler implements HttpHandler {
     protected final int replicas = 3;
     protected final String serverName;
     protected final Ring ring;
-    protected final SQl db;
+    protected final Storage db;
+    protected final Backup db_backup;
 
-    public ServerHandler(String serverName, Ring ring, SQl db) {
+    public ServerHandler(String serverName, Ring ring, Storage db, Backup db_backup) {
         this.serverName = serverName;
         this.ring = ring;
         this.db = db;
+        this.db_backup = db_backup;
     }
 
     protected static Map<String, String> queryToMap(String query){
@@ -142,8 +145,12 @@ public abstract class ServerHandler implements HttpHandler {
         return replicasRemaining;
     }
 
-    public SQl getDb() {
+    public Storage getDb() {
         return db;
+    }
+
+    public Backup getDb_backup() {
+        return db_backup;
     }
 
     public Ring getRing() { return ring; }

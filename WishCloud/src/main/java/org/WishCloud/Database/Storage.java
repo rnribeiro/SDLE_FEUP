@@ -10,21 +10,11 @@ import org.WishCloud.CRDT.CRDT;
 import org.WishCloud.CRDT.ShoppingList;
 import org.sqlite.SQLiteConfig;
 
-public class SQl {
-    private Connection conn = null;
-    private final String dbName;
+public class Storage extends SQlite{
     private static final String sql_lists = """
             CREATE TABLE IF NOT EXISTS lists (
                 name text NOT NULL,
             	uuid text NOT NULL PRIMARY KEY
-            );""";
-
-    private static final String sql_lists_hinted = """
-            CREATE TABLE IF NOT EXISTS lists (
-                name text NOT NULL,
-            	uuid text NOT NULL PRIMARY KEY,
-            	server text NOT NULL,
-            	method text NOT NULL
             );""";
 
     private static final String sql_items = """
@@ -38,11 +28,12 @@ public class SQl {
             );""";
 
 
-    public SQl(String name) {
-        this.dbName = "db_" + name + ".db";
+    public Storage(String name) {
+        super(name);
     }
 
-    public void createDB(boolean hinted) {
+    @Override
+    public void createDB() {
         String path = System.getProperty("user.dir");
         Path fullPath = Paths.get(path, "DBs", this.dbName);
         if (fullPath.getParent().toFile().mkdirs()) {
@@ -60,73 +51,12 @@ public class SQl {
 
                 Statement stmt = conn.createStatement();
                 stmt.execute(sql_items);
-                if (!hinted) stmt.execute(sql_lists);
-                else stmt.execute(sql_lists_hinted);
-
+                stmt.execute(sql_lists);
             }
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         } finally {
             close();
-        }
-    }
-
-    private void connect() {
-        String path = System.getProperty("user.dir");
-        Path fullPath = Paths.get(path, "DBs", this.dbName);
-        String url = "jdbc:sqlite:" + fullPath;
-
-        try {
-            this.conn = DriverManager.getConnection(url);
-            SQLiteConfig config = new SQLiteConfig();
-            config.setJournalMode(SQLiteConfig.JournalMode.WAL);
-            config.apply(this.conn);
-            System.out.println("Connected to database.");
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
-    }
-
-    private void close() {
-        try {
-            if (this.conn != null) {
-                if (!this.conn.getAutoCommit()) { this.conn.rollback(); }
-                this.conn.close();
-            }
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
-    }
-
-    private void beginTransaction() {
-        try {
-            if (this.conn != null) {
-                this.conn.setAutoCommit(false);
-            }
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
-    }
-
-    private void commitTransaction() {
-        try {
-            if (this.conn != null) {
-                this.conn.commit();
-                this.conn.setAutoCommit(true);
-            }
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
-    }
-
-    private void rollbackTransaction() {
-        try {
-            if (this.conn != null) {
-                if (!this.conn.getAutoCommit()) { this.conn.rollback(); }
-                this.conn.setAutoCommit(true);
-            }
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
         }
     }
 
@@ -244,12 +174,6 @@ public class SQl {
             PreparedStatement deleteItemsPstmt = this.conn.prepareStatement(deleteItemsSql);
             deleteItemsPstmt.setString(1, listUUID);
             deleteItemsPstmt.executeUpdate();
-
-            // delete the list from the 'hinted_nodes' table
-            String deleteHintedNodeSql = "DELETE FROM hinted_nodes WHERE list_uuid = ?";
-            PreparedStatement deleteHintedNodePstmt = this.conn.prepareStatement(deleteHintedNodeSql);
-            deleteHintedNodePstmt.setString(1, listUUID);
-            deleteHintedNodePstmt.executeUpdate();
 
             commitTransaction();
         } catch (SQLException e) {

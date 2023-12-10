@@ -1,21 +1,21 @@
 package org.WishCloud.Cloud.Handlers;
 
-import org.WishCloud.Database.SQl;
+import org.WishCloud.Database.Backup;
+import org.WishCloud.Database.Storage;
 import org.WishCloud.CRDT.ShoppingList;
 import org.WishCloud.Utils.Ring;
 import org.WishCloud.Utils.Serializer;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.sun.net.httpserver.HttpExchange;
 
 public class UploadHandler extends ServerHandler {
-    private final SQl db_hinted;
 
-    public UploadHandler(String serverName, Ring ring, SQl db, SQl db_hinted) {
-        super(serverName, ring, db);
-        this.db_hinted = db_hinted;
+    public UploadHandler(String serverName, Ring ring, Storage db, Backup db_hinted) {
+        super(serverName, ring, db, db_hinted);
     }
 
     @Override
@@ -68,10 +68,26 @@ public class UploadHandler extends ServerHandler {
                 return;
             }
 
-            // find pair hint uuid in database
-            // if list exists check if hint is the same for hinted
-            // merge and update
-            // else insert in case no list of uuid exists
+            // check if hinted list corresponds to the hinted address
+            AtomicReference<String> ref = new AtomicReference<>(null);
+            ShoppingList localSL = getDb_backup().read(params.get("uuid"), ref);
+            if (localSL == null) {
+                if (getDb_backup().write(remoteSL, "insert", hinted)) {
+                    sendResponse(exchange, 500, "Error creating shopping list on database!");
+                    return;
+                }
+            } else {
+                if (!ref.get().equals(hinted)) {
+                    sendResponse(exchange, 500, "This server already hints this list for another!");
+                    return;
+                }
+
+                localSL = localSL.merge(remoteSL.getListItems());
+                if (getDb_backup().write(localSL, "update", hinted)) {
+                    sendResponse(exchange, 500, "Error updating shopping list on database!");
+                    return;
+                }
+            }
         }
 
         if (!cord) { // if the request is not a cord request
