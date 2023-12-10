@@ -178,6 +178,7 @@ public class Client {
                 list = shoppingList.merge(localList.getListItems());
                 db.write(list, "update");
                 updateListInCloud(listUUID, Serializer.serialize(list));
+
             } else {
                 db.write(shoppingList, "create");
                 list = shoppingList;
