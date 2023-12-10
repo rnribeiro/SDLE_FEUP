@@ -117,16 +117,12 @@ public class Client {
 
     private static boolean synchronizeListWithServer(String listUUID, byte[] serializedList) {
         try {
-            System.out.println("\nAttempting to synchronize list with cloud...");
+            ShoppingInterface.printSyncAttempt();
 
             // get the preference list
             List<String> preferenceList = ring.getPreferenceList(listUUID, 3);
 
-            // print the preference list
-            System.out.println("\nPreference List:");
-            for (String server : preferenceList) {
-                System.out.println(server);
-            }
+            ShoppingInterface.printShoppingList(preferenceList);
 
             // loop through the preference list and try to create the list in the cloud
             for (String server : preferenceList) {
@@ -206,12 +202,7 @@ public class Client {
 
             // Prompt user for list actions
             while (true) {
-                System.out.println("\nList Actions:");
-                System.out.println("1- Add Item");
-                System.out.println("2- Update Item");
-                System.out.println("3- Exit");
-                System.out.println("4- Refresh");
-                System.out.print("Enter your choice: ");
+                ShoppingInterface.printListActions();
                 int choice;
                 try {
                     choice = scanner.nextInt();
@@ -251,7 +242,7 @@ public class Client {
         String itemName;
         while (true) {
             System.out.print("Enter Item Name (0 to exit): ");
-            itemName = scanner.next();
+            itemName = scanner.nextLine();
             if (itemName.equals("0")) {
                 handleAccessList(scanner, shoppingList.getListID());
             }
@@ -323,7 +314,7 @@ public class Client {
         String itemName;
         while (true) {
             System.out.print("Enter Item Name (0 to exit): ");
-            itemName = scanner.next();
+            itemName = scanner.nextLine();
             if (itemName.equals("0")) {
                 handleAccessList(scanner, shoppingList.getListID());
             }
@@ -429,10 +420,7 @@ public class Client {
             List<String> preferenceList = ring.getPreferenceList(listUUID, 3);
 
             // print the preference list
-            System.out.println("\nPreference List:");
-            for (String server : preferenceList) {
-                System.out.println(server);
-            }
+            ShoppingInterface.printShoppingList(preferenceList);
 
             // loop through the preference list and try to get the list from the cloud
             int serversDown = 0;

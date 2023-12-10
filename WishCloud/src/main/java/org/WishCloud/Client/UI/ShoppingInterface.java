@@ -3,6 +3,7 @@ package org.WishCloud.Client.UI;
 import org.WishCloud.CRDT.CRDT;
 import org.WishCloud.ShoppingList.ShoppingList;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
@@ -18,7 +19,7 @@ public class ShoppingInterface {
     public static String promptForListName(Scanner scanner) {
         clearConsole();
         System.out.print("Enter List Name: ");
-        return scanner.next();
+        return scanner.nextLine();
     }
 
     public static void clearConsole() {
@@ -87,5 +88,27 @@ public class ShoppingInterface {
             System.out.println("Item updated locally. Failed to synchronize with cloud.");
         }
     }
+
+    public static void printSyncAttempt() {
+        System.out.println("\nAttempting to synchronize list with cloud...");
+    }
+
+    public static void printShoppingList(List<String> preferenceList) {
+        // print the preference list
+        System.out.println("\nPreference List:");
+        for (String server : preferenceList) {
+            System.out.println(server);
+        }
+    }
+
+    public static void printListActions() {
+        System.out.println("\nList Actions:");
+        System.out.println("1- Add Item");
+        System.out.println("2- Update Item");
+        System.out.println("3- Exit");
+        System.out.println("4- Refresh");
+        System.out.print("Enter your choice: ");
+    }
+
 
 }
