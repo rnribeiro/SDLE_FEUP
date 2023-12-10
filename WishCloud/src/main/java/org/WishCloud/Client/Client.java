@@ -1,5 +1,6 @@
 package org.WishCloud.Client;
 
+import java.io.Console;
 import java.io.IOException;
 import java.net.*;
 import java.net.http.HttpClient;
@@ -9,8 +10,8 @@ import java.util.*;
 
 import org.WishCloud.CRDT.CRDT;
 import org.WishCloud.Client.UI.ShoppingInterface;
-import org.WishCloud.Database.SQl;
-import org.WishCloud.ShoppingList.ShoppingList;
+import org.WishCloud.Database.Storage;
+import org.WishCloud.CRDT.ShoppingList;
 import org.WishCloud.Utils.Ring;
 import org.WishCloud.Utils.Serializer;
 
@@ -18,7 +19,7 @@ import org.WishCloud.Utils.Serializer;
 public class Client {
 
     private static String clientUUID;
-    private static SQl db;
+    private static Storage db;
     private static Ring ring;
     private static List<String> seeds;
     private static final int HashSpace = 1 << 31;
@@ -55,7 +56,7 @@ public class Client {
 
         System.out.println("Client UUID: " + clientUUID);
 
-        db = new SQl(clientUUID);
+        db = new Storage(clientUUID);
         db.createDB();
 
         Scanner scanner = new Scanner(System.in);
@@ -104,7 +105,7 @@ public class Client {
 
         // create the shopping list
         ShoppingList shoppingList = new ShoppingList(listName, listUUID, new HashMap<>());
-        ShoppingInterface.displayCreationSuccess(listUUID, db.insertSL(shoppingList));
+        ShoppingInterface.displayCreationSuccess(listUUID, db.write(shoppingList, "insert"));
 
         // serialize the shopping list
         byte[] serializedList = Serializer.serialize(shoppingList);
@@ -116,63 +117,44 @@ public class Client {
         ShoppingInterface.displaySynchronizationStatus(syncSuccess);
     }
 
-    private static boolean synchronizeListWithServer(String listUUID, byte[] serializedList, boolean firstTime) {
-        try {
-//            ShoppingInterface.printSyncAttempt();
+    private static boolean synchronizeListWithServer(String listUUID, byte[] serializedList) {
+        ShoppingInterface.printSyncAttempt();
 
-            // get the preference list
-            List<String> preferenceList = ring.getPreferenceList(listUUID, 3);
+        // get the preference list
+        List<String> preferenceList = ring.getPreferenceList(listUUID, 3);
 
-            if (firstTime) {
-                // print the preference list
-                ShoppingInterface.printPreferenceList(preferenceList);
-            }
+        // print the preference list
+        ShoppingInterface.printPreferenceList(preferenceList);
 
-            int serversDown = 0;
-            // loop through the preference list and try to create the list in the cloud
-            for (String server : preferenceList) {
+        // loop through the preference list and try to create the list in the cloud
+        for (String server : preferenceList) {
 
-                // create http client and request
-                HttpClient client = HttpClient.newHttpClient();
-                HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create("http://" + server + "/create?uuid=" + listUUID + "&cord=true"))
-                        .POST(HttpRequest.BodyPublishers.ofByteArray(serializedList))
-                        .build();
+            // create http client and request
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("http://" + server + "/upload?uuid=" + listUUID + "&cord=true"))
+                    .timeout(java.time.Duration.ofSeconds(3))
+                    .POST(HttpRequest.BodyPublishers.ofByteArray(serializedList))
+                    .build();
 
-                // send the request
-                try {
-                    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            // send the request
+            try {
+                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-                    // check the response code
-                    if (response.statusCode() == 200) {
-                        if (firstTime) {
-                            System.out.println("\nReplica of list " + listUUID + " created in " + server + "!\nServer Response: " + response.body());
-                        }
-                        return true;
-                    } else {
-                        if (firstTime) {
-                            System.out.println("\nReplica of list " + listUUID + " failed in " + server + "!\nServer Response: " + response.body());
-                        }
-                    }
-
-                } catch (ConnectException | InterruptedException e) {
-                    // handle connection error
-//                    System.out.println("Failed to create replica in " + server + "! Server Down!");
-                    serversDown++;
+                // check the response code
+                if (response.statusCode() == 200) {
+                    System.out.println("\nReplica of list " + listUUID + " created in " + server + "!\nServer Response: " + response.body());
+                    return true;
+                } else {
+                    System.out.println("\nReplica of list " + listUUID + " failed in " + server + "!\nServer Response: " + response.body());
                 }
 
+            } catch (InterruptedException | IOException e) {
+                System.out.println(e.getMessage());
             }
-            if (serversDown == 3 && firstTime) {
-                System.out.println("\nAll servers are down. Please try again later.");
-                return false;
-            }
-            return false;
 
-        } catch (IOException e) {
-
-            e.printStackTrace();
-            return false;
         }
+        return false;
     }
 
     private static ShoppingList getListFromServerOrLocal(String listUUID, boolean firstTime) {
@@ -181,46 +163,37 @@ public class Client {
         if (shoppingList == null) {
             // print getting list from local
             System.out.println("\nAttempting to get list from local database...");
-            if (!firstTime) {
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-            list = db.getShoppingList(listUUID);
-            synchronizeListWithServer(listUUID, Serializer.serialize(list), false);
+            pauseConsole(500);
+            list = db.read(listUUID);
+            synchronizeListWithServer(listUUID, Serializer.serialize(list));
         } else {
             // merge the local list with the server list
             System.out.println("\nAttempting to get list from local database...");
-            if (!firstTime) {
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-            ShoppingList localList = db.getShoppingList(listUUID);
+            pauseConsole(500);
+            ShoppingList localList = db.read(listUUID);
             if (localList != null) {
                 // print merging lists
                 System.out.println("\nMerging lists...");
-                if (!firstTime) {
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
+                pauseConsole(500);
                 list = shoppingList.merge(localList.getListItems());
-                db.updateShoppingList(list);
+                db.write(list, "update");
                 updateListInCloud(listUUID, Serializer.serialize(list));
+
             } else {
-                db.insertSL(shoppingList);
+                db.write(shoppingList, "insert");
                 list = shoppingList;
             }
         }
 
         return list;
+    }
+
+    private static void pauseConsole(int time) {
+        try {
+            Thread.sleep(time);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     private static class ScannerThread extends Thread {
@@ -265,36 +238,19 @@ public class Client {
 
             // Prompt user for list actions
             while (true) {
-                ScannerThread scannerThread = new ScannerThread(new Scanner(System.in));
-                scannerThread.start(); // Start a new thread for the next input
-                // Wait for the user input thread to finish
-                try {
-                    scannerThread.join();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-
-                int choice = scannerThread.getChoice();
+                int choice = scanner.nextInt();
 
                 switch (choice) {
                     case 1:
-                        timer.cancel();
-                        scannerThread.interrupt();
                         handleAddItem(new Scanner(System.in), shoppingList);
                         break;
                     case 2:
-                        timer.cancel();
-                        scannerThread.interrupt();
                         handleUpdateItem(new Scanner(System.in), shoppingList);
                         break;
                     case 3:
-                        List<String> preferenceList = ring.getPreferenceList(listUUID, 3);
-                        ShoppingInterface.printPreferenceList(preferenceList);
-                        handleAccessList(scanner, listUUID);
+                        handleAccessList(new Scanner(System.in), listUUID);
                         break;
                     case 4:
-                        timer.cancel();
-                        scannerThread.interrupt();
                         ShoppingInterface.clearConsole();
                         mainMenu(scanner);
                         break;
@@ -311,27 +267,21 @@ public class Client {
 
     private static void displayAndRefreshListPeriodically(Scanner scanner, ShoppingList shoppingList) {
         // Schedule a task to refresh and display the list every 5 seconds
-        timer.scheduleAtFixedRate(new TimerTask() {
-            @Override
-            public void run() {
-                // refresh the list
-                ShoppingInterface.clearConsole();
-                System.out.println("Refreshing list...");
-                // wait
-                try {
-                    Thread.sleep(2000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                ShoppingInterface.displayShoppingList(getListFromServerOrLocal(shoppingList.getListID(), false));
-                System.out.println("\nList Actions:");
-                System.out.println("1- Add Item");
-                System.out.println("2- Update Item");
-                System.out.println("3- Show Preference List");
-                System.out.println("4- Exit");
-                System.out.print("Enter your choice: ");
-            }
-        }, 0, 10000);
+        //timer.scheduleAtFixedRate(new TimerTask() {
+        // @Override
+        // public void run() {
+        // refresh the list
+        ShoppingInterface.clearConsole();
+//        ShoppingInterface.displayShoppingList(getListFromServerOrLocal(shoppingList.getListID()));
+        ShoppingInterface.displayShoppingList(shoppingList);
+        System.out.println("\nList Actions:");
+        System.out.println("1- Add Item");
+        System.out.println("2- Update Item");
+        System.out.println("3- Refresh");
+        System.out.println("4- Exit");
+        System.out.print("Enter your choice: ");
+        // }
+        //}, 0, 5000); // Run the task every 5 seconds
     }
 
     private static void handleAddItem(Scanner scanner, ShoppingList shoppingList) {
@@ -387,7 +337,7 @@ public class Client {
         shoppingList.addItem(itemName, crdtItem);
 
         // try updating the list in the database
-        if (!db.updateShoppingList(shoppingList)) {
+        if (!db.write(shoppingList, "update")) {
             System.out.println("Item locally added successfully.");
         } else {
             System.out.println("Failed to add item.");
@@ -452,7 +402,7 @@ public class Client {
         shoppingList.updateItem(itemName, crdtItem);
 
         // try updating the list in the database
-        if (!db.updateShoppingList(shoppingList)) {
+        if (!db.write(shoppingList, "update")) {
             System.out.println("Item locally updated successfully.");
         } else {
             System.out.println("Failed to update item.");
@@ -472,106 +422,86 @@ public class Client {
     }
 
     private static boolean updateListInCloud(String listID, byte[] serializedList) {
-        try {
-            // get the preference list
-            List<String> preferenceList = ring.getPreferenceList(listID, 3);
+        // get the preference list
+        List<String> preferenceList = ring.getPreferenceList(listID, 3);
 
-            for (String server : preferenceList) {
+        for (String server : preferenceList) {
 
-                // create http client and request
-                HttpClient client = HttpClient.newHttpClient();
-                HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create("http://" + server + "/update?uuid=" + listID + "&cord=true"))
-                        .POST(HttpRequest.BodyPublishers.ofByteArray(serializedList))
-                        .build();
+            // create http client and request
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("http://" + server + "/upload?uuid=" + listID + "&cord=true"))
+                    .timeout(java.time.Duration.ofSeconds(3))
+                    .POST(HttpRequest.BodyPublishers.ofByteArray(serializedList))
+                    .build();
 
-                try {
-                    // send the request
-                    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            try {
+                // send the request
+                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-                    // check the response code
-                    if (response.statusCode() == 200) {
-                        System.out.println("\nReplica in " + server + " updated! Server Response: " + response.body());
-                        return true;
-                    } else {
-                        System.out.println("\nFailed to update replica in " + server + "! Server Response: " + response.body());
-                    }
-                } catch (ConnectException | InterruptedException e) {
-                    System.out.println("\nFailed to update replica in " + server + "!" + e.getMessage());
+                // check the response code
+                if (response.statusCode() == 200) {
+                    System.out.println("\nReplica in " + server + " updated! Server Response: " + response.body());
+                    return true;
+                } else {
+                    System.out.println("\nFailed to update replica in " + server + "! Server Response: " + response.body());
                 }
-
+            } catch (InterruptedException | IOException e) {
+                System.out.println("\nFailed to update replica in " + server + "!" + e.getMessage());
             }
-            return false;
-
-        } catch (IOException e) {
-            e.printStackTrace();
-            return false;
         }
+        return false;
     }
 
-    private static int getServersDown = 0;
+    private static ShoppingList getListFromServer(String listUUID) {
+        // getting list from server
+        System.out.println("\nAttempting to get list from cloud...");
 
-    private static ShoppingList getListFromServer(String listUUID, boolean firstTime) {
-        try {
-            // getting list from server
-            System.out.println("\nAttempting to get list from cloud...");
-            if (!firstTime) {
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-            // get the preference list
-            List<String> preferenceList = ring.getPreferenceList(listUUID, 3);
+        // get the preference list
+        List<String> preferenceList = ring.getPreferenceList(listUUID, 3);
 
-            // print the preference list
-            if (firstTime) {
-                ShoppingInterface.printPreferenceList(preferenceList);
-            }
-            getServersDown = 0;
-            // loop through the preference list and try to get the list from the cloud
-            for (String server : preferenceList) {
+        // print the preference list
+        ShoppingInterface.printPreferenceList(preferenceList);
 
-                // create http client and request
-                HttpClient client = HttpClient.newHttpClient();
-                HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create("http://" + server + "/read?uuid=" + listUUID + "&cord=true"))
-                        .GET()
-                        .build();
+        // loop through the preference list and try to get the list from the cloud
+        int serversDown = 0;
+        for (String server : preferenceList) {
 
-                try {
-                    // send the request
-                    HttpResponse<byte[]> response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
+            // create http client and request
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("http://" + server + "/read?uuid=" + listUUID + "&cord=true"))
+                    .timeout(java.time.Duration.ofSeconds(3))
+                    .GET()
+                    .build();
 
-                    // check the response code
-                    if (response.statusCode() == 200) {
-                        return Serializer.deserialize(response.body());
-                    } else if (response.statusCode() == 404 && Arrays.toString(response.body()).equals("Shopping list doesn't exist!")) { // list not found in server
-                        System.out.println("\nList not found in " + server + "!");
-                        ShoppingList localList = db.getShoppingList(listUUID); // get the list from local database
-                        if (localList != null) { // if the list exists in local database then synchronize it with the server
-                            synchronizeListWithServer(listUUID, Serializer.serialize(localList), false);
-                        }
+            try {
+                // send the request
+                HttpResponse<byte[]> response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
+
+                // check the response code
+                if (response.statusCode() == 200) {
+                    return Serializer.deserialize(response.body());
+                } else if (response.statusCode() == 404) { // list not found in server
+                    System.out.println("\nList not found in " + server + "!");
+                    ShoppingList localList = db.read(listUUID); // get the list from local database
+                    if (localList != null) { // if the list exists in local database then synchronize it with the server
+                        synchronizeListWithServer(listUUID, Serializer.serialize(localList));
                     }
-                    else {
-                        System.out.println(response.statusCode());
-                        System.out.println("\nFailed to read from server " + server + "! Server Response: " + response.body());
+                } else {
+                    System.out.println(response.statusCode());
+                    System.out.println("\nFailed to read from server " + server + "! Server Response: " + Arrays.toString(response.body()));
 
-                    }
-                } catch (InterruptedException | ConnectException e) {
-                    getServersDown++;
                 }
+            } catch (InterruptedException | IOException e) {
+                serversDown++;
             }
-            if (getServersDown == 3) {
-                System.out.println("All servers are down. Please try again later.");
-                return null;
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
+        }
+        if (serversDown == 3) {
+            System.out.println("\nAll servers are down. Please try again later.");
+            return null;
         }
         return null;
     }
-
 
 }

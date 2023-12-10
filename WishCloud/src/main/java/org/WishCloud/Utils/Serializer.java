@@ -2,7 +2,7 @@ package org.WishCloud.Utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import org.WishCloud.ShoppingList.ShoppingList;
+import org.WishCloud.CRDT.ShoppingList;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;

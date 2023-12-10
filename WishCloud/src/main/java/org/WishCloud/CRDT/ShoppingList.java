@@ -1,10 +1,9 @@
-package org.WishCloud.ShoppingList;
+package org.WishCloud.CRDT;
 
 import java.util.HashMap;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.WishCloud.CRDT.CRDT;
 
 public class ShoppingList {
     // declare variables
