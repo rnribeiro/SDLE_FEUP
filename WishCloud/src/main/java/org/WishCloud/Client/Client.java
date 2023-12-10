@@ -104,7 +104,7 @@ public class Client {
 
         // create the shopping list
         ShoppingList shoppingList = new ShoppingList(listName, listUUID, new HashMap<>());
-        ShoppingInterface.displayCreationSuccess(listUUID, db.write(shoppingList, "create"));
+        ShoppingInterface.displayCreationSuccess(listUUID, db.write(shoppingList, "insert"));
 
         // serialize the shopping list
         byte[] serializedList = Serializer.serialize(shoppingList);
@@ -180,7 +180,7 @@ public class Client {
                 updateListInCloud(listUUID, Serializer.serialize(list));
 
             } else {
-                db.write(shoppingList, "create");
+                db.write(shoppingList, "insert");
                 list = shoppingList;
             }
         }

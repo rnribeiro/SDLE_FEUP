@@ -27,12 +27,7 @@ public class SQl {
             	list_uuid text NOT NULL,
             	FOREIGN KEY (list_uuid) REFERENCES lists (uuid)
             );""";
-    private static final String sql_hinted_nodes = """
-            CREATE TABLE IF NOT EXISTS hinted_nodes (
-            	server text NOT NULL,
-            	list_uuid text NOT NULL,
-            	FOREIGN KEY (list_uuid) REFERENCES lists (uuid)
-            );""";
+
 
     public SQl(String name) {
         this.dbName = "db_" + name + ".db";
@@ -57,7 +52,7 @@ public class SQl {
                 Statement stmt = conn.createStatement();
                 stmt.execute(sql_lists);
                 stmt.execute(sql_items);
-                stmt.execute(sql_hinted_nodes);
+//                stmt.execute(sql_hinted_nodes);
             }
         } catch (SQLException e) {
             System.out.println(e.getMessage());

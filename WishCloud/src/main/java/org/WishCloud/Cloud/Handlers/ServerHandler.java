@@ -99,7 +99,7 @@ public abstract class ServerHandler implements HttpHandler {
             try {
                 HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() == 200) {
-                    System.out.println("\nReplica in " + server + " created! Server Response: " + response.body());
+                    System.out.println("\nReplica in " + server + " upload! Server Response: " + response.body());
                     servedNodes.add(server);
                     if (hintedNode != null) { hintedNodes.add(hintedNode); }
                 }
@@ -126,10 +126,10 @@ public abstract class ServerHandler implements HttpHandler {
                     .build();
 
             try {
-                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+                HttpResponse<byte[]> response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
                 if (response.statusCode() == 200) {
-                    System.out.println("\nReplica in " + server + " created! Server Response: " + response.body());
-                    ShoppingList newSL = Serializer.deserialize(response.body().getBytes());
+                    System.out.println("\nReplica in " + server + " created! Server Response: " + Arrays.toString(response.body()));
+                    ShoppingList newSL = Serializer.deserialize(response.body());
                     shoppingList = shoppingList.merge(newSL.getListItems());
                     replicasRemaining--;
                 }

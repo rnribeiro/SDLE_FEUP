@@ -38,7 +38,7 @@ public class CreateHandler extends ServerHandler {
         } else if ((shoppingList = Serializer.deserialize(body)) == null) {
             sendResponse(exchange, 400, "Shopping list corrupted!");
             return;
-        } else if (getDb().write(shoppingList, "create")) {
+        } else if (getDb().write(shoppingList, "insert")) {
             // when implementing hinted handoff, this will be changed to insertSL(shoppingList, params.get("hinted")))
             sendResponse(exchange, 500, "Error loading shopping list on database!");
             return;
