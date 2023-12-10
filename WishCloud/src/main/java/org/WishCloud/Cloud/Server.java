@@ -54,6 +54,8 @@ public class Server {
             server.createContext("/update", new UpdateHandler(this.serverName, ring, db));
             server.createContext("/refresh", new RefreshHandler());
             server.createContext("/kill", new KillHandler(this.serverName, ring, db, server));
+            server.createContext("/activate", new ActivateHandler(this.serverName, ring, db, server));
+            server.createContext("/deactivate", new DeactivateHandler(this.serverName, ring, db, server));
 
             // set executor
             server.setExecutor(threadPoolExecutor);

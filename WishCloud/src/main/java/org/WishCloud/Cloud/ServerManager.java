@@ -38,12 +38,52 @@ public class ServerManager {
             case "check":
                 checkServer(host, port);
                 break;
+            case "activate":
+                activateServer(host, port);
+                break;
+            case "deactivate":
+                deactivateServer(host, port);
+                break;
             default:
                 System.out.println("Invalid action!");
                 break;
         }
 
 
+    }
+
+    private static void deactivateServer(String host, String port) {
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://" + host + ":" + port + "/deactivate?uuid=1&cord=true"))
+                .GET()
+                .build();
+        try {
+            // Send the request
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            System.out.println(response.body());
+
+        } catch (InterruptedException | IOException e) {
+            // Print the full stack trace for better debugging
+            e.printStackTrace();
+        }
+    }
+
+    private static void activateServer(String host, String port) {
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://" + host + ":" + port + "/activate?uuid=1&cord=true"))
+                .GET()
+                .build();
+        try {
+            // Send the request
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            System.out.println(response.body());
+
+        } catch (InterruptedException | IOException e) {
+            // Print the full stack trace for better debugging
+            e.printStackTrace();
+        }
     }
 
     private static void checkServer(String host, String port) {
@@ -74,6 +114,7 @@ public class ServerManager {
         try {
             // Send the request
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            System.exit(0);
 
         } catch (InterruptedException | IOException e) {
             // Print the full stack trace for better debugging

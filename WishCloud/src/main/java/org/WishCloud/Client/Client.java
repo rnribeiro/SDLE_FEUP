@@ -323,8 +323,6 @@ public class Client {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-
-//                ShoppingInterface.clearConsole();
                 ShoppingInterface.displayShoppingList(getListFromServerOrLocal(shoppingList.getListID(), false));
                 System.out.println("\nList Actions:");
                 System.out.println("1- Add Item");
@@ -549,15 +547,16 @@ public class Client {
                     // check the response code
                     if (response.statusCode() == 200) {
                         return Serializer.deserialize(response.body());
-                    } else if (response.statusCode() == 404) { // list not found in server
+                    } else if (response.statusCode() == 404 && Arrays.toString(response.body()).equals("Shopping list doesn't exist!")) { // list not found in server
                         System.out.println("\nList not found in " + server + "!");
                         ShoppingList localList = db.getShoppingList(listUUID); // get the list from local database
                         if (localList != null) { // if the list exists in local database then synchronize it with the server
                             synchronizeListWithServer(listUUID, Serializer.serialize(localList), false);
                         }
-                    } else {
+                    }
+                    else {
                         System.out.println(response.statusCode());
-                        System.out.println("\nFailed to read from server " + server + "! Server Response: " + Arrays.toString(response.body()));
+                        System.out.println("\nFailed to read from server " + server + "! Server Response: " + response.body());
 
                     }
                 } catch (InterruptedException | ConnectException e) {
