@@ -242,7 +242,7 @@ public class Client {
         String itemName;
         while (true) {
             System.out.print("Enter Item Name (0 to exit): ");
-            itemName = scanner.nextLine();
+            itemName = scanner.next();
             if (itemName.equals("0")) {
                 handleAccessList(scanner, shoppingList.getListID());
             }
@@ -314,7 +314,7 @@ public class Client {
         String itemName;
         while (true) {
             System.out.print("Enter Item Name (0 to exit): ");
-            itemName = scanner.nextLine();
+            itemName = scanner.next();
             if (itemName.equals("0")) {
                 handleAccessList(scanner, shoppingList.getListID());
             }
