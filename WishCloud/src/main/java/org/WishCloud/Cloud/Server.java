@@ -53,6 +53,7 @@ public class Server {
             server.createContext("/read", new ReadHandler(this.serverName, ring, db));
             server.createContext("/update", new UpdateHandler(this.serverName, ring, db));
             server.createContext("/refresh", new RefreshHandler());
+            server.createContext("/kill", new KillHandler(this.serverName, ring, db, server));
 
             // set executor
             server.setExecutor(threadPoolExecutor);
@@ -73,11 +74,7 @@ public class Server {
     }
 
     public static void main(String[] args) {
-//        // create server
-//        Server server = new Server("localhost", 8000, List.of("localhost:8000", "localhost:8001"));
-//
-//        // start server
-//        server.start();
+
     }
 }
 

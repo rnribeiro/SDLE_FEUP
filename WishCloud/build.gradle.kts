@@ -18,6 +18,12 @@ application {
         mainClass.set("org.WishCloud.Cloud.Cloud")
         classpath = sourceSets["main"].runtimeClasspath
     }
+
+    // Configuration for Server Manager
+    tasks.create<JavaExec>("server") {
+        mainClass.set("org.WishCloud.Cloud.ServerManager")
+        classpath = sourceSets["main"].runtimeClasspath
+    }
 }
 
 repositories {
